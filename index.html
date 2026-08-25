@@ -46,9 +46,9 @@
       <button id="prevBtn" type="button">העמוד הקודם</button><span class="page-info" id="pageInfo">עמוד 1 מתוך 1</span><button id="nextBtn" type="button">העמוד הבא</button>
     </div>
     <div class="workspace hidden" id="workspace"><canvas id="pdfCanvas"></canvas><div class="signature-layer" id="signatureLayer"><img id="signatureImg" alt="signature"><div class="sig-date" id="sigDateLabel"></div></div></div>
-    <p class="hint hidden" id="hint">לחץ/י על "צייר חתימה" - ברגע שתאשר/י, החתימה עם התאריך תודבק על המסמך ותוצע שליחה מיידית בוואטסאפ.</p>
+    <p class="hint hidden" id="hint">לחץ/י על "חתום כאן" - ברגע שתאשר/י, החתימה עם התאריך תודבק בתחתית המסמך ותוצע שליחה מיידית בוואטסאפ.</p>
     <div class="toolbar hidden" id="actionToolbar">
-      <button class="primary" id="drawBtn" type="button">צייר חתימה</button>
+      <button class="primary" id="drawBtn" type="button">חתום כאן</button>
       <div class="size-control hidden" id="sizeControl"><label for="sizeRange" id="sizeLabel">גודל:</label><input id="sizeRange" type="range" min="80" max="320" value="180"></div>
       <button class="danger hidden" id="removeBtn" type="button">הסר חתימה</button>
       <button class="share" id="sendBtn" type="button">שלח PDF לחתימה (ריק)</button>
@@ -76,8 +76,8 @@
       prevBtn:{he:'העמוד הקודם',en:'Previous page'},
       nextBtn:{he:'העמוד הבא',en:'Next page'},
       pageInfo:{he:'עמוד {n} מתוך {total}',en:'Page {n} of {total}'},
-      hint:{he:'לחץ/י על "צייר חתימה" - ברגע שתאשר/י, החתימה עם התאריך תודבק על המסמך ותוצע שליחה מיידית בוואטסאפ.',en:'Tap "Draw signature" - once confirmed, your signature and the date will be placed on the document and WhatsApp sending will open right away.'},
-      drawBtn:{he:'צייר חתימה',en:'Draw signature'},
+      hint:{he:'לחץ/י על "חתום כאן" - ברגע שתאשר/י, החתימה עם התאריך תודבק בתחתית המסמך ותוצע שליחה מיידית בוואטסאפ.',en:'Tap "Sign here" - once confirmed, your signature and the date will be placed in the footer of the document and WhatsApp sending will open right away.'},
+      drawBtn:{he:'חתום כאן',en:'Sign here'},
       sizeLabel:{he:'גודל:',en:'Size:'},
       removeBtn:{he:'הסר חתימה',en:'Remove signature'},
       sendBtn:{he:'שלח PDF לחתימה (ריק)',en:'Send blank PDF to sign'},
@@ -146,7 +146,7 @@
       renderTask=page.render({canvasContext:ctx,viewport});await renderTask.promise;renderTask=null;lastPageInfo={n:pageNum,total:pdfDoc.numPages};pageInfo.textContent=T('pageInfo',lastPageInfo);$('prevBtn').disabled=pageNum<=1;$('nextBtn').disabled=pageNum>=pdfDoc.numPages;showPlacement();
     }
     function showPlacement(){const p=placements[pageNum];if(!p||!signatureData){signatureLayer.style.display='none';$('removeBtn').classList.add('hidden');return}signatureImg.src=signatureData;sigDateLabel.textContent=signatureDate?T('signedLabel',{date:formatDateLocale(signatureDate)}):'';signatureLayer.style.display='block';signatureLayer.style.left=(10+p.x)+'px';signatureLayer.style.top=(10+p.y)+'px';signatureLayer.style.width=p.w+'px';signatureLayer.style.height=p.h+'px';$('removeBtn').classList.remove('hidden')}
-    function createPlacement(){const w=+$('sizeRange').value,h=Math.max(45,w*.36);placements[pageNum]={x:Math.max(0,(pdfCanvas.width-w)/2),y:Math.max(0,(pdfCanvas.height-h)/2),w,h,canvasW:pdfCanvas.width,canvasH:pdfCanvas.height};showPlacement();$('sizeControl').classList.remove('hidden')}
+    function createPlacement(){const w=+$('sizeRange').value,h=Math.max(45,w*.36),margin=Math.max(28,pdfCanvas.height*0.045);placements[pageNum]={x:Math.max(0,(pdfCanvas.width-w)/2),y:Math.max(0,pdfCanvas.height-h-margin),w,h,canvasW:pdfCanvas.width,canvasH:pdfCanvas.height};showPlacement();$('sizeControl').classList.remove('hidden')}
     fileInput.addEventListener('change',e=>openPdf(e.target.files[0]));
     ['dragenter','dragover'].forEach(t=>dropZone.addEventListener(t,e=>{e.preventDefault();dropZone.classList.add('drag')}));['dragleave','drop'].forEach(t=>dropZone.addEventListener(t,e=>{e.preventDefault();dropZone.classList.remove('drag')}));dropZone.addEventListener('drop',e=>openPdf(e.dataTransfer.files[0]));
     $('prevBtn').onclick=async()=>{if(pageNum>1){saveVisiblePlacement();pageNum--;await renderPage()}};$('nextBtn').onclick=async()=>{if(pageNum<pdfDoc.numPages){saveVisiblePlacement();pageNum++;await renderPage()}};
