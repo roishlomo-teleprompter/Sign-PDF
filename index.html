@@ -30,6 +30,9 @@
     .finish-msg{margin:0 0 12px;font-weight:700;color:#075985;font-size:1.02rem}
     .finish-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .whatsapp{background:var(--wa);color:#fff;font-size:1rem;padding:12px 20px}.whatsapp:hover{background:var(--wa-dark)}
+    .scroll-fab{position:fixed;bottom:22px;inset-inline-end:18px;z-index:40;background:var(--brand);color:#fff;border-radius:999px;padding:12px 18px;box-shadow:0 6px 18px #0369a155;font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:6px;animation:fabBounce 1.8s infinite}
+    .scroll-fab.hidden{display:none}
+    @keyframes fabBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
     @media(max-width:600px){main{padding:12px 8px 28px}.panel{padding:12px;border-radius:14px}.workspace{padding:6px}.toolbar button{flex:1;min-width:115px}.size-control{width:100%;justify-content:center}.finish-actions button{flex:1;min-width:130px}#langToggle{position:static;display:inline-block;margin-top:10px}}
   </style>
 </head>
@@ -63,6 +66,7 @@
     </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
   </section></main>
+  <button class="scroll-fab hidden" id="scrollToSignBtn" type="button">⬇ <span id="scrollToSignLabel">לאזור החתימה</span></button>
   <dialog id="signDialog"><div class="modal"><h2 id="signDialogTitle">צייר את החתימה</h2><p id="signDialogDesc">חתום באצבע, בעכבר או בעט דיגיטלי. לאחר האישור החתימה תודבק אוטומטית עם התאריך.</p><canvas id="signPad"></canvas><div class="modal-actions"><button class="primary" id="useSignature" type="button">אשר וחתום</button><button id="clearPad" type="button">נקה</button><button id="cancelSign" type="button">ביטול</button></div></div></dialog>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -92,6 +96,7 @@
       signedLabel:{he:'נחתם: {date}',en:'Signed: {date}'},
       finishMsg:{he:'✅ נחתם בתאריך {date}',en:'✅ Signed on {date}'},
       langToggle:{he:'English',en:'עברית'},
+      scrollToSign:{he:'⬇ לאזור החתימה',en:'⬇ To signature area'},
       stLoading:{he:'טוען את המסמך...',en:'Loading document...'},
       stInvalidFile:{he:'יש לבחור קובץ PDF תקין.',en:'Please choose a valid PDF file.'},
       stReady:{he:'המסמך מוכן. אפשר לחתום כאן או לשלוח לחבר שיחתום בעצמו.',en:'Document ready. Sign here, or send it to a friend to sign.'},
@@ -117,7 +122,7 @@
     };
     let lang='he';
     function T(key,vars){let s=(STRINGS[key]&&STRINGS[key][lang])||key;if(vars)Object.keys(vars).forEach(k=>{s=s.replace('{'+k+'}',vars[k])});return s}
-    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle'};
+    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle',scrollToSignBtn:'scrollToSign'};
     let lastPageInfo=null,lastStatus=null;
     function formatDateLocale(d){const locale=lang==='he'?'he-IL':'en-GB';return d.toLocaleDateString(locale)+' '+d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'})}
     function applyLanguage(){
@@ -139,12 +144,33 @@
     function hideFinishPanel(){finishPanel.classList.add('hidden')}
     async function openPdf(file){
       if(!file||file.type!=='application/pdf'){setStatus('stInvalidFile',null,true);return}
-      try{setStatus('stLoading');pdfBytes=new Uint8Array(await file.arrayBuffer());pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;pageNum=1;placements={};signatureData=null;signatureDate=null;dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();await renderPage();setStatus('stReady')}catch(e){console.error(e);setStatus('stOpenError',null,true)}}
+      try{setStatus('stLoading');pdfBytes=new Uint8Array(await file.arrayBuffer());pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;pageNum=1;placements={};signatureData=null;signatureDate=null;dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();$('scrollToSignBtn').classList.remove('hidden');await renderPage();setStatus('stReady')}catch(e){console.error(e);setStatus('stOpenError',null,true)}}
+    function getAvailableWidth(){
+      const panelEl=document.querySelector('.panel'),panelStyle=getComputedStyle(panelEl);
+      const panelContent=panelEl.clientWidth-parseFloat(panelStyle.paddingLeft)-parseFloat(panelStyle.paddingRight);
+      const wsStyle=getComputedStyle(workspace),wsPadding=parseFloat(wsStyle.paddingLeft)+parseFloat(wsStyle.paddingRight);
+      return Math.max(220,panelContent-wsPadding-4);
+    }
     async function renderPage(){
       if(renderTask)try{renderTask.cancel()}catch(e){}
-      const page=await pdfDoc.getPage(pageNum), viewport=page.getViewport({scale:renderScale});pdfCanvas.width=viewport.width;pdfCanvas.height=viewport.height;
+      const page=await pdfDoc.getPage(pageNum), baseViewport=page.getViewport({scale:1});
+      const available=getAvailableWidth();
+      renderScale=Math.min(2.2,Math.max(0.4,available/baseViewport.width));
+      const viewport=page.getViewport({scale:renderScale});
+      const prev=placements[pageNum];
+      if(prev && (prev.canvasW!==viewport.width || prev.canvasH!==viewport.height)){
+        const fx=viewport.width/prev.canvasW, fy=viewport.height/prev.canvasH;
+        prev.x*=fx;prev.y*=fy;prev.w*=fx;prev.h*=fy;prev.canvasW=viewport.width;prev.canvasH=viewport.height;
+      }
+      pdfCanvas.width=viewport.width;pdfCanvas.height=viewport.height;
       renderTask=page.render({canvasContext:ctx,viewport});await renderTask.promise;renderTask=null;lastPageInfo={n:pageNum,total:pdfDoc.numPages};pageInfo.textContent=T('pageInfo',lastPageInfo);$('prevBtn').disabled=pageNum<=1;$('nextBtn').disabled=pageNum>=pdfDoc.numPages;showPlacement();
     }
+    let resizeTimer=null;
+    window.addEventListener('resize',()=>{
+      if(!pdfDoc)return;
+      clearTimeout(resizeTimer);
+      resizeTimer=setTimeout(()=>{saveVisiblePlacement();renderPage()},180);
+    });
     function showPlacement(){const p=placements[pageNum];if(!p||!signatureData){signatureLayer.style.display='none';$('removeBtn').classList.add('hidden');return}signatureImg.src=signatureData;sigDateLabel.textContent=signatureDate?T('signedLabel',{date:formatDateLocale(signatureDate)}):'';signatureLayer.style.display='block';signatureLayer.style.left=(10+p.x)+'px';signatureLayer.style.top=(10+p.y)+'px';signatureLayer.style.width=p.w+'px';signatureLayer.style.height=p.h+'px';$('removeBtn').classList.remove('hidden')}
     function createPlacement(){const w=+$('sizeRange').value,h=Math.max(45,w*.36),margin=Math.max(28,pdfCanvas.height*0.045);placements[pageNum]={x:Math.max(0,(pdfCanvas.width-w)/2),y:Math.max(0,pdfCanvas.height-h-margin),w,h,canvasW:pdfCanvas.width,canvasH:pdfCanvas.height};showPlacement();$('sizeControl').classList.remove('hidden')}
     fileInput.addEventListener('change',e=>openPdf(e.target.files[0]));
@@ -214,6 +240,11 @@
     }
     $('sendBtn').onclick=()=>shareCurrentPdf(false);
     $('whatsappBtn').onclick=()=>shareCurrentPdf(false);
+    $('scrollToSignBtn').onclick=()=>{
+      const p=placements[pageNum];
+      if(p && signatureLayer.style.display!=='none'){signatureLayer.scrollIntoView({behavior:'smooth',block:'center'})}
+      else{pdfCanvas.scrollIntoView({behavior:'smooth',block:'end'})}
+    };
     $('langToggle').onclick=()=>{lang=lang==='he'?'en':'he';applyLanguage()};
     applyLanguage();
   </script>
