@@ -20,7 +20,7 @@
     button{border:0;border-radius:11px;padding:11px 16px;font-weight:700;font-size:.95rem;cursor:pointer;background:#e5eff5;color:var(--ink);transition:.15s}button:hover{filter:brightness(.97)}button:disabled{opacity:.45;cursor:not-allowed}
     .primary{background:var(--brand);color:#fff}.download{background:var(--download);color:#fff}.share{background:var(--share);color:#fff}.danger{color:var(--danger);background:#fff0ef}.page-info{min-width:110px;text-align:center;font-weight:700}
     .workspace{position:relative;margin:auto;width:max-content;max-width:100%;background:#d6e7f0;padding:10px;border-radius:12px;overflow:auto;box-shadow:inset 0 0 0 1px #c2dbe8}
-    #pdfCanvas{display:block;background:#fff;max-width:none;box-shadow:0 2px 10px #0002;touch-action:none}.signature-layer{position:absolute;display:none;cursor:move;touch-action:none;border:2px dashed var(--brand);background:#ffffffb8;border-radius:5px}.signature-layer img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+    #pdfCanvas{display:block;background:#fff;max-width:none;box-shadow:0 2px 10px #0002}.signature-layer{position:absolute;display:none;cursor:move;touch-action:none;border:2px dashed var(--brand);background:#ffffffb8;border-radius:5px}.signature-layer img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
     .signature-layer .sig-date{position:absolute;bottom:-24px;right:0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:.7rem;color:var(--muted);white-space:nowrap;pointer-events:none;box-shadow:0 1px 4px #0001}
     .hint{text-align:center;color:var(--muted);font-size:.9rem;margin:12px 0 0}.size-control{display:flex;align-items:center;gap:8px}.size-control input{width:130px;accent-color:var(--brand)}
     dialog{border:0;border-radius:18px;padding:0;width:min(560px,calc(100% - 24px));box-shadow:0 24px 80px #0006}dialog::backdrop{background:#07304988}.modal{padding:18px}.modal h2{margin:0 0 6px}.modal p{margin:0 0 14px;color:var(--muted);font-size:.92rem}
@@ -47,6 +47,9 @@
     <label class="upload" id="dropZone"><input id="fileInput" type="file" accept="application/pdf,.pdf"><strong id="uploadTitle">בחר מסמך PDF</strong><span id="uploadSubtitle">או גרור את הקובץ לכאן</span></label>
     <div class="toolbar hidden" id="pageToolbar">
       <button id="prevBtn" type="button">העמוד הקודם</button><span class="page-info" id="pageInfo">עמוד 1 מתוך 1</span><button id="nextBtn" type="button">העמוד הבא</button>
+    </div>
+    <div class="toolbar hidden" id="zoomToolbar">
+      <button id="zoomOutBtn" type="button">－</button><span class="page-info" id="zoomLevel">100%</span><button id="zoomInBtn" type="button">＋</button><button class="share" id="zoomResetBtn" type="button">התאם לרוחב</button>
     </div>
     <div class="workspace hidden" id="workspace"><canvas id="pdfCanvas"></canvas><div class="signature-layer" id="signatureLayer"><img id="signatureImg" alt="signature"><div class="sig-date" id="sigDateLabel"></div></div></div>
     <p class="hint hidden" id="hint">לחץ/י על "חתום כאן" - ברגע שתאשר/י, החתימה עם התאריך תודבק בתחתית המסמך ותוצע שליחה מיידית בוואטסאפ.</p>
@@ -97,6 +100,7 @@
       finishMsg:{he:'✅ נחתם בתאריך {date}',en:'✅ Signed on {date}'},
       langToggle:{he:'English',en:'עברית'},
       scrollToSign:{he:'⬇ לאזור החתימה',en:'⬇ To signature area'},
+      zoomResetBtn:{he:'התאם לרוחב',en:'Fit to width'},
       stLoading:{he:'טוען את המסמך...',en:'Loading document...'},
       stInvalidFile:{he:'יש לבחור קובץ PDF תקין.',en:'Please choose a valid PDF file.'},
       stReady:{he:'המסמך מוכן. אפשר לחתום כאן או לשלוח לחבר שיחתום בעצמו.',en:'Document ready. Sign here, or send it to a friend to sign.'},
@@ -122,7 +126,7 @@
     };
     let lang='he';
     function T(key,vars){let s=(STRINGS[key]&&STRINGS[key][lang])||key;if(vars)Object.keys(vars).forEach(k=>{s=s.replace('{'+k+'}',vars[k])});return s}
-    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle',scrollToSignBtn:'scrollToSign'};
+    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle',scrollToSignBtn:'scrollToSign',zoomResetBtn:'zoomResetBtn'};
     let lastPageInfo=null,lastStatus=null;
     function formatDateLocale(d){const locale=lang==='he'?'he-IL':'en-GB';return d.toLocaleDateString(locale)+' '+d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'})}
     function applyLanguage(){
@@ -136,7 +140,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     const $=id=>document.getElementById(id), fileInput=$('fileInput'), dropZone=$('dropZone'), workspace=$('workspace'), pdfCanvas=$('pdfCanvas'), ctx=pdfCanvas.getContext('2d');
     const pageToolbar=$('pageToolbar'),actionToolbar=$('actionToolbar'),pageInfo=$('pageInfo'),statusEl=$('status'),signatureLayer=$('signatureLayer'),signatureImg=$('signatureImg'),sigDateLabel=$('sigDateLabel'),finishPanel=$('finishPanel'),finishMsg=$('finishMsg');
-    let pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.35,signatureData=null,signatureDate=null,placements={},drag=null;
+    let pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.35,zoomFactor=1,signatureData=null,signatureDate=null,placements={},drag=null;
     function setStatus(key,vars,error=false){lastStatus={key,vars,error};statusEl.textContent=T(key,vars);statusEl.className='status'+(error?' error':'')}
     function pad(n){return String(n).padStart(2,'0')}
     function formatDateForPdf(d){return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
@@ -144,7 +148,7 @@
     function hideFinishPanel(){finishPanel.classList.add('hidden')}
     async function openPdf(file){
       if(!file||file.type!=='application/pdf'){setStatus('stInvalidFile',null,true);return}
-      try{setStatus('stLoading');pdfBytes=new Uint8Array(await file.arrayBuffer());pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;pageNum=1;placements={};signatureData=null;signatureDate=null;dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();$('scrollToSignBtn').classList.remove('hidden');await renderPage();setStatus('stReady')}catch(e){console.error(e);setStatus('stOpenError',null,true)}}
+      try{setStatus('stLoading');pdfBytes=new Uint8Array(await file.arrayBuffer());pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;pageNum=1;zoomFactor=1;placements={};signatureData=null;signatureDate=null;dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');$('zoomToolbar').classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();$('scrollToSignBtn').classList.remove('hidden');await renderPage();setStatus('stReady')}catch(e){console.error(e);setStatus('stOpenError',null,true)}}
     function getAvailableWidth(){
       const panelEl=document.querySelector('.panel'),panelStyle=getComputedStyle(panelEl);
       const panelContent=panelEl.clientWidth-parseFloat(panelStyle.paddingLeft)-parseFloat(panelStyle.paddingRight);
@@ -155,8 +159,10 @@
       if(renderTask)try{renderTask.cancel()}catch(e){}
       const page=await pdfDoc.getPage(pageNum), baseViewport=page.getViewport({scale:1});
       const available=getAvailableWidth();
-      renderScale=Math.min(2.2,Math.max(0.4,available/baseViewport.width));
+      const baseScale=available/baseViewport.width;
+      renderScale=Math.min(5,Math.max(0.3,baseScale*zoomFactor));
       const viewport=page.getViewport({scale:renderScale});
+      $('zoomLevel').textContent=Math.round(zoomFactor*100)+'%';
       const prev=placements[pageNum];
       if(prev && (prev.canvasW!==viewport.width || prev.canvasH!==viewport.height)){
         const fx=viewport.width/prev.canvasW, fy=viewport.height/prev.canvasH;
@@ -240,6 +246,9 @@
     }
     $('sendBtn').onclick=()=>shareCurrentPdf(false);
     $('whatsappBtn').onclick=()=>shareCurrentPdf(false);
+    $('zoomInBtn').onclick=async()=>{zoomFactor=Math.min(3,zoomFactor*1.25);saveVisiblePlacement();await renderPage()};
+    $('zoomOutBtn').onclick=async()=>{zoomFactor=Math.max(0.5,zoomFactor/1.25);saveVisiblePlacement();await renderPage()};
+    $('zoomResetBtn').onclick=async()=>{zoomFactor=1;saveVisiblePlacement();await renderPage()};
     $('scrollToSignBtn').onclick=()=>{
       const p=placements[pageNum];
       if(p && signatureLayer.style.display!=='none'){signatureLayer.scrollIntoView({behavior:'smooth',block:'center'})}
