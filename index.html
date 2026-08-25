@@ -30,6 +30,18 @@
     .finish-msg{margin:0 0 12px;font-weight:700;color:#075985;font-size:1.02rem}
     .finish-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .whatsapp{background:var(--wa);color:#fff;font-size:1rem;padding:12px 20px}.whatsapp:hover{background:var(--wa-dark)}
+    .link-panel{margin-top:18px;padding:16px;background:#e6f4fd;border:1px solid #bfe3f7;border-radius:16px;text-align:center}
+    .link-panel-msg{margin:0 0 10px;font-weight:700;color:#075985;font-size:.95rem}
+    .link-row{display:flex;gap:8px;margin-bottom:10px}
+    .link-row input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.85rem;background:#fff;color:var(--ink);direction:ltr;text-align:left}
+    .link-row button{background:var(--brand);color:#fff;white-space:nowrap}
+    .mydocs{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+    .mydocs h2{font-size:1.05rem;margin:0 0 3px}
+    .mydocs-hint{color:var(--muted);font-size:.82rem;margin:0 0 12px}
+    .doc-row{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fbfeff}
+    .doc-info{min-width:0}.doc-name{font-weight:700;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc-date{color:var(--muted);font-size:.78rem}
+    .doc-actions{display:flex;gap:6px;flex-wrap:wrap}.doc-actions button{padding:7px 11px;font-size:.8rem;border-radius:9px}
+    .doc-copy{background:var(--brand);color:#fff}.doc-wa{background:var(--wa);color:#fff}.doc-del{background:#fff0ef;color:var(--danger)}
     .scroll-fab{position:fixed;bottom:22px;inset-inline-end:18px;z-index:40;background:var(--brand);color:#fff;border-radius:999px;padding:12px 18px;box-shadow:0 6px 18px #0369a155;font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:6px;animation:fabBounce 1.8s infinite}
     .scroll-fab.hidden{display:none}
     @keyframes fabBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -57,8 +69,13 @@
       <button class="primary" id="drawBtn" type="button">חתום כאן</button>
       <div class="size-control hidden" id="sizeControl"><label for="sizeRange" id="sizeLabel">גודל:</label><input id="sizeRange" type="range" min="80" max="320" value="180"></div>
       <button class="danger hidden" id="removeBtn" type="button">הסר חתימה</button>
-      <button class="share" id="sendBtn" type="button">שלח PDF לחתימה (ריק)</button>
+      <button class="share" id="sendBtn" type="button">צור קישור לחתימה</button>
       <button id="newBtn" type="button">מסמך חדש</button>
+    </div>
+    <div class="link-panel hidden" id="linkPanel">
+      <p class="link-panel-msg" id="linkPanelMsg">🔗 הקישור נוצר - שלח אותו במקום את הקובץ:</p>
+      <div class="link-row"><input type="text" id="linkOutput" readonly><button id="copyLinkBtn" type="button">העתק</button></div>
+      <button class="whatsapp" id="linkWhatsappBtn" type="button">📲 שלח קישור בוואטסאפ</button>
     </div>
     <div class="finish-panel hidden" id="finishPanel">
       <p class="finish-msg" id="finishMsg">✅ המסמך נחתם בהצלחה</p>
@@ -68,11 +85,17 @@
       </div>
     </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="mydocs hidden" id="myDocsSection">
+      <h2 id="myDocsTitle">המסמכים שלי</h2>
+      <p class="mydocs-hint" id="myDocsHint">רשימה זו נשמרת רק בדפדפן הזה, במכשיר הזה.</p>
+      <div id="myDocsList"></div>
+    </div>
   </section></main>
   <button class="scroll-fab hidden" id="scrollToSignBtn" type="button">⬇ <span id="scrollToSignLabel">לאזור החתימה</span></button>
   <dialog id="signDialog"><div class="modal"><h2 id="signDialogTitle">צייר את החתימה</h2><p id="signDialogDesc">חתום באצבע, בעכבר או בעט דיגיטלי. לאחר האישור החתימה תודבק אוטומטית עם התאריך.</p><canvas id="signPad"></canvas><div class="modal-actions"><button class="primary" id="useSignature" type="button">אשר וחתום</button><button id="clearPad" type="button">נקה</button><button id="cancelSign" type="button">ביטול</button></div></div></dialog>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>
     const STRINGS={
       headerTitle:{he:'חתימה על מסמך PDF',en:'Sign a PDF Document'},
@@ -87,7 +110,7 @@
       drawBtn:{he:'חתום כאן',en:'Sign here'},
       sizeLabel:{he:'גודל:',en:'Size:'},
       removeBtn:{he:'הסר חתימה',en:'Remove signature'},
-      sendBtn:{he:'שלח PDF לחתימה (ריק)',en:'Send blank PDF to sign'},
+      sendBtn:{he:'צור קישור לחתימה',en:'Create signing link'},
       newBtn:{he:'מסמך חדש',en:'New document'},
       whatsappBtn:{he:'📲 שלח בוואטסאפ',en:'📲 Send via WhatsApp'},
       downloadBtn:{he:'הורד PDF חתום',en:'Download signed PDF'},
@@ -123,11 +146,26 @@
       shareTextUnsigned:{he:'קובץ PDF לחתימה - נא לחתום ולשלוח בחזרה.',en:'PDF file to sign - please sign and send it back.'},
       waTextSigned:{he:'שלום! מצורף מסמך PDF חתום.',en:'Hi! Attached is a signed PDF document.'},
       waTextUnsigned:{he:'שלום! מצורף מסמך PDF לחתימה.',en:'Hi! Attached is a PDF document to sign.'},
-      openLinkInstruction:{he:'כדי לחתום, פתח/י את הקישור הזה, העלה/י את הקובץ המצורף וחתום/מי:',en:'To sign, open this link, upload the attached file, and sign:'}
+      openLinkInstruction:{he:'כדי לחתום, פתח/י את הקישור הזה, העלה/י את הקובץ המצורף וחתום/מי:',en:'To sign, open this link, upload the attached file, and sign:'},
+      stLinkOpened:{he:'הקובץ נשלח/הורד, ונפתחה גם הודעת וואטסאפ נפרדת עם קישור לכלי - יש לשלוח גם אותה כדי שהחבר יוכל לחתום.',en:'The file was shared/downloaded, and a separate WhatsApp message with the tool link was opened - send that one too so your friend can sign.'},
+      linkPanelMsg:{he:'🔗 הקישור נוצר - שלח אותו במקום את הקובץ:',en:'🔗 Link created - send this instead of the file:'},
+      copyLinkBtn:{he:'העתק',en:'Copy'},
+      linkWhatsappBtn:{he:'📲 שלח קישור בוואטסאפ',en:'📲 Send link via WhatsApp'},
+      myDocsTitle:{he:'המסמכים שלי',en:'My Documents'},
+      myDocsHint:{he:'רשימה זו נשמרת רק בדפדפן הזה, במכשיר הזה.',en:'This list is saved only in this browser, on this device.'},
+      docCopy:{he:'העתק קישור',en:'Copy link'},
+      docWa:{he:'שלח בוואטסאפ',en:'Send via WhatsApp'},
+      docDel:{he:'מחק',en:'Delete'},
+      defaultDocName:{he:'מסמך לחתימה',en:'Document to sign'},
+      stLinkCreated:{he:'הקישור נוצר בהצלחה. אפשר להעתיק או לשלוח בוואטסאפ.',en:'Link created successfully. You can copy it or send it via WhatsApp.'},
+      stLinkCopied:{he:'הקישור הועתק.',en:'Link copied.'},
+      stLinkCopyFailed:{he:'לא ניתן היה להעתיק אוטומטית - יש להעתיק ידנית משדה הטקסט.',en:'Could not copy automatically - please copy manually from the text field.'},
+      stTooLargeForLink:{he:'המסמך גדול מדי ליצירת קישור. נעבור לשליחת הקובץ בשיטה הרגילה.',en:'The document is too large to embed in a link. Falling back to sending the file directly.'},
+      stLinkLoadError:{he:'לא ניתן היה לטעון את המסמך מהקישור. ייתכן שהקישור פגום או חלקי.',en:'Could not load the document from the link. The link may be broken or incomplete.'}
     };
     let lang='he';
     function T(key,vars){let s=(STRINGS[key]&&STRINGS[key][lang])||key;if(vars)Object.keys(vars).forEach(k=>{s=s.replace('{'+k+'}',vars[k])});return s}
-    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle',scrollToSignBtn:'scrollToSign',zoomResetBtn:'zoomResetBtn'};
+    const STATIC_MAP={headerTitle:'headerTitle',headerSubtitle:'headerSubtitle',privacyText:'privacyText',uploadTitle:'uploadTitle',uploadSubtitle:'uploadSubtitle',prevBtn:'prevBtn',nextBtn:'nextBtn',hint:'hint',drawBtn:'drawBtn',sizeLabel:'sizeLabel',removeBtn:'removeBtn',sendBtn:'sendBtn',newBtn:'newBtn',whatsappBtn:'whatsappBtn',downloadBtn:'downloadBtn',signDialogTitle:'signDialogTitle',signDialogDesc:'signDialogDesc',useSignature:'useSignature',clearPad:'clearPad',cancelSign:'cancelSign',langToggle:'langToggle',scrollToSignBtn:'scrollToSign',zoomResetBtn:'zoomResetBtn',linkPanelMsg:'linkPanelMsg',copyLinkBtn:'copyLinkBtn',linkWhatsappBtn:'linkWhatsappBtn',myDocsTitle:'myDocsTitle',myDocsHint:'myDocsHint'};
     let lastPageInfo=null,lastStatus=null;
     function formatDateLocale(d){const locale=lang==='he'?'he-IL':'en-GB';return d.toLocaleDateString(locale)+' '+d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'})}
     function applyLanguage(){
@@ -137,19 +175,34 @@
       if(signatureData&&signatureDate)sigDateLabel.textContent=T('signedLabel',{date:formatDateLocale(signatureDate)});
       if(!finishPanel.classList.contains('hidden')&&signatureDate)finishMsg.textContent=T('finishMsg',{date:formatDateLocale(signatureDate)});
       if(lastStatus)setStatus(lastStatus.key,lastStatus.vars,lastStatus.error);
+      renderMyDocs();
     }
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     const $=id=>document.getElementById(id), fileInput=$('fileInput'), dropZone=$('dropZone'), workspace=$('workspace'), pdfCanvas=$('pdfCanvas'), ctx=pdfCanvas.getContext('2d');
     const pageToolbar=$('pageToolbar'),actionToolbar=$('actionToolbar'),pageInfo=$('pageInfo'),statusEl=$('status'),signatureLayer=$('signatureLayer'),signatureImg=$('signatureImg'),sigDateLabel=$('sigDateLabel'),finishPanel=$('finishPanel'),finishMsg=$('finishMsg');
-    let pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.35,zoomFactor=1,signatureData=null,signatureDate=null,placements={},drag=null;
+    let pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.35,zoomFactor=1,signatureData=null,signatureDate=null,placements={},drag=null,currentDocName='document.pdf',viaLink=false;
     function setStatus(key,vars,error=false){lastStatus={key,vars,error};statusEl.textContent=T(key,vars);statusEl.className='status'+(error?' error':'')}
     function pad(n){return String(n).padStart(2,'0')}
     function formatDateForPdf(d){return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
     function showFinishPanel(){finishMsg.textContent=T('finishMsg',{date:formatDateLocale(signatureDate)});finishPanel.classList.remove('hidden');finishPanel.scrollIntoView({behavior:'smooth',block:'nearest'})}
     function hideFinishPanel(){finishPanel.classList.add('hidden')}
+    async function loadPdfBytes(bytes){
+      try{
+        setStatus('stLoading');
+        pdfBytes=bytes;
+        pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;
+        pageNum=1;zoomFactor=1;placements={};signatureData=null;signatureDate=null;
+        dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');$('zoomToolbar').classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();$('scrollToSignBtn').classList.remove('hidden');$('linkPanel').classList.add('hidden');
+        $('myDocsSection').classList.add('hidden');
+        await renderPage();
+        setStatus('stReady');
+      }catch(e){console.error(e);setStatus('stOpenError',null,true)}
+    }
     async function openPdf(file){
       if(!file||file.type!=='application/pdf'){setStatus('stInvalidFile',null,true);return}
-      try{setStatus('stLoading');pdfBytes=new Uint8Array(await file.arrayBuffer());pdfDoc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;pageNum=1;zoomFactor=1;placements={};signatureData=null;signatureDate=null;dropZone.classList.add('hidden');pageToolbar.classList.remove('hidden');$('zoomToolbar').classList.remove('hidden');workspace.classList.remove('hidden');actionToolbar.classList.remove('hidden');$('hint').classList.remove('hidden');$('sizeControl').classList.add('hidden');$('removeBtn').classList.add('hidden');hideFinishPanel();$('scrollToSignBtn').classList.remove('hidden');await renderPage();setStatus('stReady')}catch(e){console.error(e);setStatus('stOpenError',null,true)}}
+      currentDocName=file.name||'document.pdf';viaLink=false;
+      await loadPdfBytes(new Uint8Array(await file.arrayBuffer()));
+    }
     function getAvailableWidth(){
       const panelEl=document.querySelector('.panel'),panelStyle=getComputedStyle(panelEl);
       const panelContent=panelEl.clientWidth-parseFloat(panelStyle.paddingLeft)-parseFloat(panelStyle.paddingRight);
@@ -225,31 +278,99 @@
       return await doc.save();
     }
     $('downloadBtn').onclick=async()=>{try{setStatus('stBuildingDownload');const out=await buildOutputBytes();const blob=new Blob([out],{type:'application/pdf'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='signed-document.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setStatus('stDownloaded')}catch(e){console.error(e);setStatus('stDownloadError',null,true)}};
-    async function shareCurrentPdf(auto){
+    function bytesToBase64Url(bytes){
+      let binary='';const chunk=0x8000;
+      for(let i=0;i<bytes.length;i+=chunk){binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk))}
+      return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+    function base64UrlToBytes(str){
+      str=str.replace(/-/g,'+').replace(/_/g,'/');
+      while(str.length%4)str+='=';
+      const binary=atob(str);const bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+      return bytes;
+    }
+    const MAX_LINK_CHARS=120000;
+    function buildShareLink(bytes){
+      const compressed=pako.deflate(bytes);
+      const encoded=bytesToBase64Url(compressed);
+      return {url:location.origin+location.pathname+'#doc='+encoded,tooLarge:encoded.length>MAX_LINK_CHARS};
+    }
+    async function tryLoadFromHash(){
+      const m=location.hash.match(/#doc=([^&]+)/);
+      if(!m)return false;
       try{
-        const signed=Object.keys(placements).length>0;
-        const out=await buildOutputBytes();
+        const compressed=base64UrlToBytes(m[1]);
+        const bytes=pako.inflate(compressed);
+        viaLink=true;currentDocName='document.pdf';
+        await loadPdfBytes(bytes);
+        return true;
+      }catch(e){console.error(e);setStatus('stLinkLoadError',null,true);return false}
+    }
+    const DOCS_KEY='pdfSignerDocs';
+    function loadDocsList(){try{return JSON.parse(localStorage.getItem(DOCS_KEY)||'[]')}catch(e){return[]}}
+    function saveDocsList(list){try{localStorage.setItem(DOCS_KEY,JSON.stringify(list))}catch(e){}}
+    function addDocEntry(name,url){const list=loadDocsList();list.unshift({id:Date.now().toString(36),name,url,createdAt:new Date().toISOString()});saveDocsList(list.slice(0,30));renderMyDocs()}
+    function deleteDocEntry(id){saveDocsList(loadDocsList().filter(d=>d.id!==id));renderMyDocs()}
+    function copyText(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>setStatus('stLinkCopied')).catch(()=>setStatus('stLinkCopyFailed',null,true))}else{setStatus('stLinkCopyFailed',null,true)}}
+    function renderMyDocs(){
+      const list=loadDocsList(),section=$('myDocsSection'),listEl=$('myDocsList');
+      if(!list.length||viaLink){section.classList.add('hidden');listEl.innerHTML='';return}
+      section.classList.remove('hidden');listEl.innerHTML='';
+      list.forEach(d=>{
+        const row=document.createElement('div');row.className='doc-row';
+        const info=document.createElement('div');info.className='doc-info';
+        const nameEl=document.createElement('div');nameEl.className='doc-name';nameEl.textContent=d.name;
+        const dateEl=document.createElement('div');dateEl.className='doc-date';dateEl.textContent=formatDateLocale(new Date(d.createdAt));
+        info.appendChild(nameEl);info.appendChild(dateEl);
+        const actions=document.createElement('div');actions.className='doc-actions';
+        const copyBtn=document.createElement('button');copyBtn.className='doc-copy';copyBtn.textContent=T('docCopy');copyBtn.onclick=()=>copyText(d.url);
+        const waBtn=document.createElement('button');waBtn.className='doc-wa';waBtn.textContent=T('docWa');waBtn.onclick=()=>window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(d.url),'_blank');
+        const delBtn=document.createElement('button');delBtn.className='doc-del';delBtn.textContent=T('docDel');delBtn.onclick=()=>deleteDocEntry(d.id);
+        actions.appendChild(copyBtn);actions.appendChild(waBtn);actions.appendChild(delBtn);
+        row.appendChild(info);row.appendChild(actions);listEl.appendChild(row);
+      });
+    }
+    async function shareFileFallback(out,signed,auto){
+      try{
         const blob=new Blob([out],{type:'application/pdf'});
         const fileName=signed?'signed-document.pdf':'document-to-sign.pdf';
         const file=new File([blob],fileName,{type:'application/pdf'});
-        const toolLink=location.href.split('#')[0].split('?')[0];
-        const shareText=signed?T('shareTextSigned'):(T('shareTextUnsigned')+'\n\n'+T('openLinkInstruction')+'\n'+toolLink);
-        const waText=signed?T('waTextSigned'):(T('waTextUnsigned')+'\n\n'+T('openLinkInstruction')+'\n'+toolLink);
+        const toolLink=location.origin+location.pathname;
         if(navigator.canShare && navigator.canShare({files:[file]})){
-          await navigator.share({files:[file],title:signed?T('shareTitleSigned'):T('shareTitleUnsigned'),text:shareText});
-          setStatus('stShared');
+          try{await navigator.share({files:[file],title:signed?T('shareTitleSigned'):T('shareTitleUnsigned'),text:signed?T('shareTextSigned'):T('shareTextUnsigned')})}catch(e){if(e.name!=='AbortError')throw e}
         }else{
           const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-          window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(waText),'_blank');
-          setStatus('stFallbackShare');
         }
+        if(!signed){window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(T('openLinkInstruction')+'\n'+toolLink),'_blank');setStatus('stLinkOpened')}
+        else{setStatus('stFallbackShare')}
       }catch(e){
         if(e.name==='AbortError'){setStatus(auto?'stShareCancelledAuto':'stShareCancelled')}
         else{console.error(e);setStatus(auto?'stShareAutoFailed':'stShareFailed',null,true)}
       }
     }
+    async function shareCurrentPdf(auto){
+      try{
+        const signed=Object.keys(placements).length>0;
+        const out=await buildOutputBytes();
+        const {url,tooLarge}=buildShareLink(out);
+        if(tooLarge){setStatus('stTooLargeForLink',null,true);await shareFileFallback(out,signed,auto);return}
+        if(!signed){
+          $('linkOutput').value=url;
+          $('linkPanel').classList.remove('hidden');
+          $('linkPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+          addDocEntry(currentDocName||T('defaultDocName'),url);
+          setStatus('stLinkCreated');
+          return;
+        }
+        window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(T('shareTextSigned')+'\n'+url),'_blank');
+        setStatus('stShared');
+      }catch(e){console.error(e);setStatus(auto?'stShareAutoFailed':'stShareFailed',null,true)}
+    }
     $('sendBtn').onclick=()=>shareCurrentPdf(false);
     $('whatsappBtn').onclick=()=>shareCurrentPdf(false);
+    $('copyLinkBtn').onclick=()=>copyText($('linkOutput').value);
+    $('linkWhatsappBtn').onclick=()=>window.open('https://api.whatsapp.com/send?text='+encodeURIComponent($('linkOutput').value),'_blank');
     $('zoomInBtn').onclick=async()=>{zoomFactor=Math.min(3,zoomFactor*1.25);saveVisiblePlacement();await renderPage()};
     $('zoomOutBtn').onclick=async()=>{zoomFactor=Math.max(0.5,zoomFactor/1.25);saveVisiblePlacement();await renderPage()};
     $('zoomResetBtn').onclick=async()=>{zoomFactor=1;saveVisiblePlacement();await renderPage()};
@@ -259,7 +380,11 @@
       else{pdfCanvas.scrollIntoView({behavior:'smooth',block:'end'})}
     };
     $('langToggle').onclick=()=>{lang=lang==='he'?'en':'he';applyLanguage()};
-    applyLanguage();
+    (async function init(){
+      const loaded=await tryLoadFromHash();
+      applyLanguage();
+      if(!loaded){renderMyDocs()}
+    })();
   </script>
 </body>
 </html>
