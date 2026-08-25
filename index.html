@@ -122,7 +122,8 @@
       shareTextSigned:{he:'המסמך נחתם, מצורף PDF.',en:'The document has been signed, PDF attached.'},
       shareTextUnsigned:{he:'קובץ PDF לחתימה - נא לחתום ולשלוח בחזרה.',en:'PDF file to sign - please sign and send it back.'},
       waTextSigned:{he:'שלום! מצורף מסמך PDF חתום.',en:'Hi! Attached is a signed PDF document.'},
-      waTextUnsigned:{he:'שלום! מצורף מסמך PDF לחתימה.',en:'Hi! Attached is a PDF document to sign.'}
+      waTextUnsigned:{he:'שלום! מצורף מסמך PDF לחתימה.',en:'Hi! Attached is a PDF document to sign.'},
+      openLinkInstruction:{he:'כדי לחתום, פתח/י את הקישור הזה, העלה/י את הקובץ המצורף וחתום/מי:',en:'To sign, open this link, upload the attached file, and sign:'}
     };
     let lang='he';
     function T(key,vars){let s=(STRINGS[key]&&STRINGS[key][lang])||key;if(vars)Object.keys(vars).forEach(k=>{s=s.replace('{'+k+'}',vars[k])});return s}
@@ -231,12 +232,15 @@
         const blob=new Blob([out],{type:'application/pdf'});
         const fileName=signed?'signed-document.pdf':'document-to-sign.pdf';
         const file=new File([blob],fileName,{type:'application/pdf'});
+        const toolLink=location.href.split('#')[0].split('?')[0];
+        const shareText=signed?T('shareTextSigned'):(T('shareTextUnsigned')+'\n\n'+T('openLinkInstruction')+'\n'+toolLink);
+        const waText=signed?T('waTextSigned'):(T('waTextUnsigned')+'\n\n'+T('openLinkInstruction')+'\n'+toolLink);
         if(navigator.canShare && navigator.canShare({files:[file]})){
-          await navigator.share({files:[file],title:signed?T('shareTitleSigned'):T('shareTitleUnsigned'),text:signed?T('shareTextSigned'):T('shareTextUnsigned')});
+          await navigator.share({files:[file],title:signed?T('shareTitleSigned'):T('shareTitleUnsigned'),text:shareText});
           setStatus('stShared');
         }else{
           const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-          window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(signed?T('waTextSigned'):T('waTextUnsigned')),'_blank');
+          window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(waText),'_blank');
           setStatus('stFallbackShare');
         }
       }catch(e){
