@@ -220,7 +220,9 @@ begin
 end;
 $$;
 
--- Atomically bind a valid link to the current anonymous signer.
+-- Bind a valid pending link to the device that most recently opened it.
+-- This lets the same bearer link move between devices until it is signed,
+-- cancelled, or expired. The raw token remains required on every device.
 create or replace function public.claim_sign_request(p_token text)
 returns table (
   request_id uuid,
@@ -258,7 +260,6 @@ begin
   where sr.token_hash = v_hash
     and sr.status = 'pending'
     and sr.expires_at > now()
-    and (sr.signer_id is null or sr.signer_id = v_user_id)
   returning sr.id, sr.title, sr.original_path, sr.signed_path,
             sr.expires_at, sr.status;
 
