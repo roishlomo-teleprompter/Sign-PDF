@@ -50,6 +50,7 @@
 <body>
   <main class="app-shell">
     <div class="topbar"><div class="lang-switch"><button id="englishBtn" type="button">English</button><button id="hebrewBtn" class="active" type="button">עברית</button></div><div class="brand"><span class="brand-icon">✓</span><span data-he="חתימה מהירה" data-en="Quick Sign">חתימה מהירה</span></div></div>
+    <section class="auth-card" id="startupCard" role="status" aria-live="polite"><h1 id="startupTitle">טוען את האפליקציה...</h1><p id="startupMessage">בודק את החיבור. המסך ייפתח מיד.</p><button id="retryStartup" class="primary hidden" type="button" onclick="location.reload()">ניסיון נוסף / Retry</button><noscript><p>יש להפעיל JavaScript בדפדפן כדי להשתמש באפליקציה.</p></noscript></section>
     <section class="auth-card hidden" id="authCard"><h1 data-he="כניסה מאובטחת" data-en="Secure sign in">כניסה מאובטחת</h1><p data-he="הכנס את כתובת המייל שלך. נשלח אליך קישור חד-פעמי לכניסה, ללא סיסמה." data-en="Enter your email address. We will send you a one-time sign-in link, with no password required.">הכנס את כתובת המייל שלך. נשלח אליך קישור חד-פעמי לכניסה, ללא סיסמה.</p><div class="auth-row"><input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com"><button class="primary" id="loginBtn" type="button" data-he="שלח קישור כניסה" data-en="Send sign-in link">שלח קישור כניסה</button></div><div class="status" id="authStatus" role="status" aria-live="polite"></div></section>
     <div id="appContent" class="hidden">
     <div class="intro"><a class="logout" id="logoutBtn" data-he="יציאה" data-en="Exit">יציאה</a><h1 id="greeting" data-he="שלום, איזה מסמך שולחים?" data-en="Hello, which document are we sending?">שלום, איזה מסמך שולחים?</h1></div>
@@ -70,15 +71,37 @@
   </main>
   <dialog id="signDialog"><div class="modal"><h2 data-he="צייר את החתימה" data-en="Draw your signature">צייר את החתימה</h2><p data-he="חתום באצבע, בעכבר או בעט דיגיטלי." data-en="Sign with your finger, mouse, or digital pen.">חתום באצבע, בעכבר או בעט דיגיטלי.</p><canvas id="signPad"></canvas><div class="modal-actions"><button class="primary" id="useSignature" type="button" data-he="השתמש בחתימה" data-en="Use signature">השתמש בחתימה</button><button id="clearPad" type="button" data-he="נקה" data-en="Clear">נקה</button><button id="cancelSign" type="button" data-he="ביטול" data-en="Cancel">ביטול</button></div></div></dialog>
   <dialog id="confirmDialog" class="confirm-dialog"><div class="modal"><div class="confirm-icon" aria-hidden="true">!</div><h2 id="confirmTitle"></h2><p id="confirmMessage"></p><div class="modal-actions"><button class="confirm-yes" id="confirmYes" type="button"></button><button class="confirm-no" id="confirmNo" type="button"></button></div></div></dialog>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.js" crossorigin="anonymous"></script>
   <script>
+    let startupComplete=false;
+    function showStartupError(error){
+      if(startupComplete)return;
+      console.error('Application startup failed:',error);
+      document.getElementById('startupCard').classList.remove('hidden');
+      document.getElementById('startupTitle').textContent='לא ניתן לטעון את האפליקציה / Unable to load the app';
+      document.getElementById('startupMessage').textContent='בדוק את החיבור לאינטרנט ונסה שוב. המסמכים שלך לא נמחקו. / Check your connection and try again. Your documents have not been deleted.';
+      document.getElementById('retryStartup').classList.remove('hidden');
+    }
+    const startupWatchdog=setTimeout(()=>showStartupError(new Error('Startup timed out')),15000);
+    function finishStartup(){startupComplete=true;clearTimeout(startupWatchdog);document.getElementById('startupCard').classList.add('hidden')}
+    // Register independently of app initialization so a broken cached app can update.
+    if('serviceWorker' in navigator){
+      const wasControlled=!!navigator.serviceWorker.controller;
+      let reloading=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{if(wasControlled&&!reloading){reloading=true;location.reload()}});
+      window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(console.error));
+    }
+  </script>
+  <script src="./vendor/pdf.min.js"></script>
+  <script src="./vendor/pdf-lib.min.js"></script>
+  <script src="./vendor/supabase.js" crossorigin="anonymous"></script>
+  <script>
+    async function startApp(){
+    if(!window.supabase?.createClient||!window.pdfjsLib||!window.PDFLib)throw new Error('A required application library did not load');
     const SUPABASE_URL='https://yybpppkxniizxbeettpp.supabase.co';
     const SUPABASE_KEY='sb_publishable_VHrjc5o3jYTfJkR0Y9gZHQ_5DebiLY7';
     const STORAGE_BUCKET='sign-pdf-documents';
     const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc='./vendor/pdf.worker.min.js';
 
     const $=id=>document.getElementById(id),fileInput=$('fileInput'),dropZone=$('dropZone'),workspace=$('workspace'),pdfCanvas=$('pdfCanvas'),ctx=pdfCanvas.getContext('2d');
     const pageToolbar=$('pageToolbar'),actionToolbar=$('actionToolbar'),pageInfo=$('pageInfo'),statusEl=$('status'),signatureLayer=$('signatureLayer'),signatureImg=$('signatureImg');
@@ -93,17 +116,23 @@
     function updateGreeting(){$('greeting').textContent=signingToken?tr('מסמך מחכה לחתימה שלך','A document is waiting for your signature'):tr('שלום, איזה מסמך שולחים?','Hello, which document are we sending?')}
     function askConfirm(title,message,confirmText){return new Promise(resolve=>{const dialog=$('confirmDialog');$('confirmTitle').textContent=title;$('confirmMessage').textContent=message;$('confirmYes').textContent=confirmText;$('confirmNo').textContent=tr('חזרה','Go back');const finish=value=>{dialog.close();resolve(value)};$('confirmYes').onclick=()=>finish(true);$('confirmNo').onclick=()=>finish(false);dialog.oncancel=e=>{e.preventDefault();finish(false)};dialog.showModal()})}
 
+    function withStartupTimeout(promise){
+      let timer;
+      return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Session initialization timed out')),12000)})]).finally(()=>clearTimeout(timer));
+    }
     async function initialize(){
       if(signingToken){await initializeSigner();return}
-      const {data:{session}}=await db.auth.getSession();
+      const {data:{session},error}=await withStartupTimeout(db.auth.getSession());
+      if(error)throw error;
       if(session?.user&&!session.user.is_anonymous)showOwner(session.user);else{$('authCard').classList.remove('hidden');$('appContent').classList.add('hidden')}
+      finishStartup();
     }
 
     async function initializeSigner(){
-      $('appContent').classList.remove('hidden');$('authCard').classList.add('hidden');$('uploadCard').classList.add('hidden');$('documentsSection').classList.add('hidden');$('logoutBtn').classList.add('hidden');updateGreeting();$('newBtn').classList.add('hidden');
+      $('appContent').classList.remove('hidden');$('authCard').classList.add('hidden');$('uploadCard').classList.add('hidden');$('documentsSection').classList.add('hidden');$('logoutBtn').classList.add('hidden');updateGreeting();$('newBtn').classList.add('hidden');$('signerCard').classList.remove('hidden');finishStartup();
       try{
         status(tr('מאמת את קישור החתימה...','Verifying the signing link...'));
-        let {data:{session}}=await db.auth.getSession();
+        let {data:{session},error:sessionError}=await withStartupTimeout(db.auth.getSession());if(sessionError)throw sessionError;
         if(!session){const result=await db.auth.signInAnonymously();if(result.error)throw result.error;session=result.data.session}
         const {data,error}=await db.rpc('claim_sign_request',{p_token:signingToken});
         if(error||!data?.length)throw error||new Error(tr('הקישור אינו תקין','The link is invalid'));
@@ -123,8 +152,12 @@
       const email=$('emailInput').value.trim();if(!/^\S+@\S+\.\S+$/.test(email)){authStatus(tr('יש להזין כתובת מייל תקינה.','Enter a valid email address.'),true);return}
       $('loginBtn').disabled=true;authStatus(tr('שולח קישור כניסה...','Sending a sign-in link...'));
       const redirectTo=location.origin+location.pathname;
-      const {error}=await db.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
-      $('loginBtn').disabled=false;if(error)authStatus(error.message,true);else authStatus(tr('קישור כניסה נשלח למייל. אפשר לסגור מסך זה לאחר פתיחת הקישור.','The sign-in link was sent. You can close this screen after opening it.'))
+      try{
+        const {error}=await withStartupTimeout(db.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}}));
+        if(error)throw error;
+        authStatus(tr('קישור כניסה נשלח למייל. אפשר לסגור מסך זה לאחר פתיחת הקישור.','The sign-in link was sent. You can close this screen after opening it.'));
+      }catch(error){console.error(error);authStatus(tr('לא ניתן לשלוח קישור כניסה. בדוק את החיבור ונסה שוב.','Could not send a sign-in link. Check your connection and try again.'),true)}
+      finally{$('loginBtn').disabled=false}
     };
     $('emailInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
     $('logoutBtn').onclick=async()=>{await db.auth.signOut();location.href=location.origin+location.pathname};
@@ -217,9 +250,10 @@
 
     function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title=tr('חתימה על PDF','Sign PDF');signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('שינוי מיקום','Change position'):tr('מיקום חתימה','Place signature');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&$('appContent').classList.contains('hidden')===false)loadDocuments()}
     $('hebrewBtn').onclick=()=>setLanguage('he');$('englishBtn').onclick=()=>setLanguage('en');
-    db.auth.onAuthStateChange((event,session)=>{if(!signingToken&&event==='SIGNED_IN'&&session?.user&&!session.user.is_anonymous)showOwner(session.user)});
-    if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.error));
-    initialize();
+    db.auth.onAuthStateChange((event,session)=>{if(!signingToken&&event==='SIGNED_IN'&&session?.user&&!session.user.is_anonymous)setTimeout(()=>{showOwner(session.user);finishStartup()},0)});
+    await initialize();
+    }
+    startApp().catch(showStartupError);
   </script>
 </body>
 </html>
