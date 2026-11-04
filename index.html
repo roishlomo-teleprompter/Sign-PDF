@@ -57,6 +57,7 @@
     <section class="upload-card" id="uploadCard">
       <div class="card-title" data-he="בחירת קובץ PDF" data-en="Choose a PDF file">בחירת קובץ PDF</div>
       <div class="upload-row"><button class="primary-link" id="createLinkBtn" type="button" disabled data-he="יצירת קישור לחתימה" data-en="Create signing link">יצירת קישור לחתימה</button><label class="upload" id="dropZone"><input id="fileInput" type="file" accept="application/pdf,.pdf"><strong data-he="לחץ לבחירת מסמך" data-en="Click to choose a document">לחץ לבחירת מסמך</strong><span data-he="המסמך יהיה זמין רק באמצעות הקישור הייחודי" data-en="The document will only be available through its unique link">המסמך יהיה זמין רק באמצעות הקישור הייחודי</span><span class="selected-file" id="selectedFile"></span><span class="upload-success" id="uploadSuccess"><span class="upload-check" aria-hidden="true">✓</span><span data-he="הקובץ הועלה בהצלחה" data-en="File uploaded successfully">הקובץ הועלה בהצלחה</span></span></label></div>
+      <div id="uploadError" class="status error" role="alert" aria-live="polite"></div>
       <div class="link-result hidden" id="linkResult"><strong data-he="הקישור מוכן לשליחה:" data-en="The signing link is ready:">הקישור מוכן לשליחה:</strong><div class="link-box"><input id="signingLink" type="text" readonly><button id="emailLinkBtn" type="button" data-he="פתיחה במייל" data-en="Open email">פתיחה במייל</button><button class="primary" id="copyLinkBtn" type="button" data-he="העתקה" data-en="Copy">העתקה</button></div></div>
     </section>
     <section class="signer-card hidden" id="signerCard">
@@ -94,6 +95,7 @@
   <script src="./vendor/pdf.min.js"></script>
   <script src="./vendor/pdf-lib.min.js"></script>
   <script src="./vendor/supabase.js" crossorigin="anonymous"></script>
+  <script src="./pdf-transfer.js"></script>
   <script src="./events.js"></script>
   <script>
     async function startApp(){
@@ -165,10 +167,14 @@
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
     }
 
-    function chooseFile(file){
-      dropZone.classList.remove('uploaded');
-      if(!validPdf(file)){selectedUpload=null;$('selectedFile').textContent='';$('createLinkBtn').disabled=true;alert(tr('יש לבחור קובץ PDF תקין בגודל של עד 25MB.','Choose a valid PDF file up to 25MB.'));return}
-      selectedUpload=file;$('selectedFile').textContent=file.name;$('createLinkBtn').disabled=false;$('linkResult').classList.add('hidden');
+    let selectionVersion=0;
+    async function chooseFile(file){
+      const version=++selectionVersion;
+      selectedUpload=null;dropZone.classList.remove('uploaded');$('createLinkBtn').disabled=true;$('linkResult').classList.add('hidden');$('uploadError').textContent='';
+      if(!file){$('selectedFile').textContent='';return}
+      $('selectedFile').textContent=tr('קורא את הקובץ...','Reading file...');
+      try{const prepared=await PdfTransfer.prepare(file);if(version!==selectionVersion)return;selectedUpload=prepared;$('selectedFile').textContent=prepared.name;$('createLinkBtn').disabled=false}
+      catch(error){if(version!==selectionVersion)return;$('selectedFile').textContent='';$('uploadError').textContent=PdfTransfer.message(error,tr)}
     }
     fileInput.addEventListener('change',e=>chooseFile(e.target.files[0]));
     ['dragenter','dragover'].forEach(t=>dropZone.addEventListener(t,e=>{e.preventDefault();dropZone.classList.add('drag')}));
@@ -178,17 +184,19 @@
     $('createLinkBtn').onclick=async()=>{
       if(!selectedUpload)return;
       const button=$('createLinkBtn');button.disabled=true;button.textContent=tr('מעלה את המסמך...','Uploading document...');$('uploadCard').classList.add('loading');
-      let request=null;
+      let request=null;const uploadFile=selectedUpload;$('uploadError').textContent='';
       try{
         const expires=new Date(Date.now()+7*24*60*60*1000).toISOString();
-        const created=await db.rpc('create_sign_request',{p_title:selectedUpload.name,p_expires_at:expires});
+        const created=await db.rpc('create_sign_request',{p_title:uploadFile.name,p_expires_at:expires});
         if(created.error||!created.data?.length)throw created.error||new Error(tr('לא ניתן ליצור בקשה','Could not create the request'));
         request=created.data[0];
-        const uploaded=await db.storage.from(STORAGE_BUCKET).upload(request.original_path,selectedUpload,{contentType:'application/pdf',upsert:false});
-        if(uploaded.error)throw uploaded.error;
-        const uploadedName=selectedUpload.name,url=new URL(location.origin+location.pathname);url.searchParams.set('sign',request.signing_token);$('signingLink').value=url.toString();$('linkResult').classList.remove('hidden');
+        await PdfTransfer.upload(db,STORAGE_BUCKET,request.original_path,uploadFile);
+        const uploadedName=uploadFile.name,url=new URL(location.origin+location.pathname);url.searchParams.set('sign',request.signing_token);$('signingLink').value=url.toString();$('linkResult').classList.remove('hidden');
         selectedUpload=null;fileInput.value='';$('selectedFile').textContent=uploadedName;dropZone.classList.add('uploaded');await loadDocuments();
-      }catch(error){console.error(error);if(request?.request_id)await db.from('sign_requests').delete().eq('id',request.request_id);alert(tr('יצירת הקישור נכשלה: ','Creating the link failed: ')+(error.message||tr('שגיאה לא ידועה','Unknown error')))
+      }catch(error){
+        console.error('PDF link creation failed',error);
+        if(request?.request_id){try{await db.from('sign_requests').delete().eq('id',request.request_id)}catch(cleanupError){console.error('Request cleanup failed',cleanupError)}}
+        $('uploadError').textContent=PdfTransfer.message(error,tr);
       }finally{$('uploadCard').classList.remove('loading');button.textContent=tr('יצירת קישור לחתימה','Create signing link');button.disabled=!selectedUpload}
     };
     $('emailLinkBtn').onclick=()=>{location.href='mailto:?subject='+encodeURIComponent(tr('מסמך לחתימה','Document to sign'))+'&body='+encodeURIComponent($('signingLink').value)};
