@@ -1,5 +1,5 @@
-const CACHE_VERSION='sign-pdf-shell-v4';
-const APP_SHELL=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
+const CACHE_VERSION='sign-pdf-shell-v5';
+const APP_SHELL=['./','./index.html','./events.js','./events.css','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_VERSION).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
@@ -19,7 +19,7 @@ self.addEventListener('fetch',event=>{
     if(event.request.mode==='navigate'){
       try{
         const response=await fetch(event.request);
-        if(response.ok&&!url.search)await cache.put('./index.html',response.clone());
+        if(response.ok&&!url.search)await cache.put('./index.html','./events.js','./events.css',response.clone());
         return response;
       }catch(error){return (await cache.match('./index.html'))||Response.error()}
     }
