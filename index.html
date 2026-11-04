@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-  <title>חתימה מהירה</title>
+  <title>SignWay</title>
   <style>
     :root{--ink:#14251e;--muted:#66736d;--brand:#176b4d;--brand2:#0e4c37;--paper:#fff;--bg:#f2f5f2;--line:#d8e0db;--danger:#b3261e}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Hebrew",sans-serif;min-height:100vh}
@@ -50,7 +50,7 @@
 </head>
 <body>
   <main class="app-shell">
-    <div class="topbar"><div class="lang-switch"><button id="englishBtn" type="button">English</button><button id="hebrewBtn" class="active" type="button">עברית</button></div><div class="brand"><span class="brand-icon">✓</span><span data-he="חתימה מהירה" data-en="Quick Sign">חתימה מהירה</span></div></div>
+    <div class="topbar"><div class="lang-switch"><button id="englishBtn" type="button">English</button><button id="hebrewBtn" class="active" type="button">עברית</button></div><div class="brand"><span class="brand-icon">✓</span><span data-he="SignWay" data-en="SignWay">SignWay</span></div></div>
     <section class="auth-card" id="startupCard" role="status" aria-live="polite"><h1 id="startupTitle">טוען את האפליקציה...</h1><p id="startupMessage">בודק את החיבור. המסך ייפתח מיד.</p><button id="retryStartup" class="primary hidden" type="button" onclick="location.reload()">ניסיון נוסף / Retry</button><noscript><p>יש להפעיל JavaScript בדפדפן כדי להשתמש באפליקציה.</p></noscript></section>
     <div id="appContent" class="hidden">
     <div class="intro"><h1 id="greeting" data-he="שלום, איזה מסמך שולחים?" data-en="Hello, which document are we sending?">שלום, איזה מסמך שולחים?</h1></div>
@@ -138,8 +138,10 @@
     async function initialize(){
       if(eventToken){await initializeEventSigner();return}
       if(signingToken){await initializeSigner();return}
-      const session=await getDeviceSession();
-      showOwner(session.user);
+      const {data,error}=await withStartupTimeout(db.auth.getSession());
+      if(error&&!['refresh_token_not_found','refresh_token_already_used','session_not_found'].includes(error.code))throw error;
+      const user=error?null:data?.session?.user;
+      if(user&&!user.is_anonymous)showOwner(user);else showLogin(user);
       if(googleCallbackError)accountControls?.showError(googleCallbackError);
       window.AccountAuth?.cleanCallback();
       finishStartup();
@@ -164,8 +166,14 @@
       }catch(error){console.error(error);$('signerCard').classList.remove('hidden');status(tr('קישור החתימה אינו תקין, פג תוקף או שכבר נוצל.','The signing link is invalid, expired, or has already been used.'),true)}
     }
 
+    function showLogin(user){
+      ownerId=null;document.body.classList.add('login-mode');
+      $('appContent').classList.add('hidden');eventDashboard?.remove();eventDashboard=null;
+      accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,gate:true});
+    }
     function showOwner(user){
-      ownerId=user.id;
+      if(!user||user.is_anonymous){showLogin(user);return}
+      document.body.classList.remove('login-mode');ownerId=user.id;
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
@@ -266,12 +274,13 @@
       try{status(signingRequest?tr('שולח את המסמך החתום...','Sending the signed document...'):tr('יוצר את הקובץ החתום...','Creating the signed document...'));const blob=await buildSignedPdf();if(signingRequest){const uploaded=await db.storage.from(STORAGE_BUCKET).upload(signingRequest.signed_path,blob,{contentType:'application/pdf',upsert:false});if(uploaded.error)throw uploaded.error;const completed=await db.rpc('complete_sign_request',{p_token:signingToken});if(completed.error)throw completed.error;$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';actionToolbar.classList.add('hidden');$('hint').classList.add('hidden');if(eventFlow){await eventFlow.completed()}else{$('signerCard').insertAdjacentHTML('beforeend',`<div class="signer-success"><strong>${tr('המסמך נחתם ונשלח בהצלחה','The document was signed and sent successfully')}</strong><br>${tr('אפשר לסגור את החלון.','You can close this window.')}</div>`)}status(tr('החתימה הושלמה בהצלחה.','Signing completed successfully.'))}else{saveBlob(blob,currentFileName.replace(/\.pdf$/i,'')+tr('-חתום.pdf','-signed.pdf'));status(tr('הקובץ החתום הורד בהצלחה.','The signed file was downloaded successfully.'))}}catch(e){console.error(e);status(tr('אירעה שגיאה בשליחת הקובץ החתום: ','An error occurred while sending the signed file: ')+(e.message||''),true);button.disabled=false}
     };
 
-    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title=tr('חתימה על PDF','Sign PDF');signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('שינוי מיקום','Change position'):tr('מיקום חתימה','Place signature');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render();accountControls?.render()}if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
+    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title='SignWay';signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('שינוי מיקום','Change position'):tr('מיקום חתימה','Place signature');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render();accountControls?.render()}if(document.body.classList.contains('login-mode'))accountControls?.render();if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
     $('hebrewBtn').onclick=()=>setLanguage('he');$('englishBtn').onclick=()=>setLanguage('en');
     db.auth.onAuthStateChange((event,session)=>{
-      if(signingToken||eventToken||!ownerId)return;
+      if(signingToken||eventToken)return;
       if(event==='SIGNED_OUT'){$('appContent').classList.add('hidden');accountControls?.remove();location.reload();return}
       if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(event)&&session?.user)setTimeout(()=>{
+        if(session.user.is_anonymous){showLogin(session.user);finishStartup();return}
         if(ownerId!==session.user.id)showOwner(session.user);
         else{accountControls?.setUser(session.user);$('deviceNotice').classList.toggle('hidden',!session.user.is_anonymous)}
         finishStartup();
