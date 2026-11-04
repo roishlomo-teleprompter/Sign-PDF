@@ -97,20 +97,22 @@
   <script src="./vendor/supabase.js" crossorigin="anonymous"></script>
   <script src="./pdf-transfer.js"></script>
   <script src="./events.js"></script>
+  <script src="./account-auth.js"></script>
   <script>
     async function startApp(){
     if(!window.supabase?.createClient||!window.pdfjsLib||!window.PDFLib)throw new Error('A required application library did not load');
     const SUPABASE_URL='https://yybpppkxniizxbeettpp.supabase.co';
     const SUPABASE_KEY='sb_publishable_VHrjc5o3jYTfJkR0Y9gZHQ_5DebiLY7';
     const STORAGE_BUCKET='sign-pdf-documents';
-    const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:'pkce',detectSessionInUrl:true}});
     pdfjsLib.GlobalWorkerOptions.workerSrc='./vendor/pdf.worker.min.js';
 
     const $=id=>document.getElementById(id),fileInput=$('fileInput'),dropZone=$('dropZone'),workspace=$('workspace'),pdfCanvas=$('pdfCanvas'),ctx=pdfCanvas.getContext('2d');
     const pageToolbar=$('pageToolbar'),actionToolbar=$('actionToolbar'),pageInfo=$('pageInfo'),statusEl=$('status'),signatureLayer=$('signatureLayer'),signatureImg=$('signatureImg');
     let signingToken=new URLSearchParams(location.search).get('sign');
     const eventToken=new URLSearchParams(location.search).get('event');
-    let eventFlow=null,eventDashboard=null;
+    let eventFlow=null,eventDashboard=null,accountControls=null;
+    const googleCallbackError=window.AccountAuth?.callbackError();
     let selectedUpload=null,signingRequest=null,pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.15,baseFitScale=1,viewerMode='fit',signatureData=null,placement=null,drag=null,currentFileName='document.pdf',signingDate='',currentLang='he',ownerId=null,ownerDocs=[];
 
     function status(msg,error=false){statusEl.textContent=msg;statusEl.className='status'+(error?' error':'')}
@@ -138,6 +140,8 @@
       if(signingToken){await initializeSigner();return}
       const session=await getDeviceSession();
       showOwner(session.user);
+      if(googleCallbackError)accountControls?.showError(googleCallbackError);
+      window.AccountAuth?.cleanCallback();
       finishStartup();
     }
 
@@ -165,6 +169,7 @@
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
+      if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr})}
     }
 
     let selectionVersion=0;
@@ -203,8 +208,9 @@
     $('copyLinkBtn').onclick=async()=>{const input=$('signingLink');try{await navigator.clipboard.writeText(input.value)}catch(e){input.select();document.execCommand('copy')}$('copyLinkBtn').textContent=tr('הועתק!','Copied!');setTimeout(()=>$('copyLinkBtn').textContent=tr('העתקה','Copy'),1600)};
 
     async function loadDocuments(){
-      const list=$('documentsList');list.innerHTML=`<div class="empty-docs">${tr('טוען מסמכים...','Loading documents...')}</div>`;
-      const {data,error}=await db.from('sign_requests').select('id,title,status,original_path,signed_path,expires_at,signed_at,created_at').eq('owner_id',ownerId).order('created_at',{ascending:false});
+      const expectedOwner=ownerId,list=$('documentsList');list.innerHTML=`<div class="empty-docs">${tr('טוען מסמכים...','Loading documents...')}</div>`;
+      const {data,error}=await db.from('sign_requests').select('id,title,status,original_path,signed_path,expires_at,signed_at,created_at').eq('owner_id',expectedOwner).order('created_at',{ascending:false});
+      if(ownerId!==expectedOwner)return;
       if(error){list.innerHTML=`<div class="empty-docs">${tr('לא ניתן לטעון את המסמכים','Could not load documents')}</div>`;return}
       ownerDocs=data||[];const visibleDocs=ownerDocs.filter(d=>!eventDashboard?.managed(d.id));if(!visibleDocs.length){list.innerHTML=`<div class="empty-docs">${tr('עדיין אין מסמכים','No documents yet')}</div>`;return}
       const locale=currentLang==='he'?'he-IL':'en-US';list.innerHTML=visibleDocs.map(d=>{const expired=d.status==='pending'&&new Date(d.expires_at)<new Date(),state=expired?tr('פג תוקף','Expired'):d.status==='signed'?tr('נחתם','Signed'):d.status==='cancelled'?tr('בוטל','Cancelled'):tr('ממתין לחתימה','Awaiting signature'),badge=d.status==='signed'?'badge':d.status==='cancelled'||expired?'badge cancelled-badge':'badge pending-badge';return `<div class="doc-row"><div><div class="doc-name">${escapeHtml(d.title)}</div><div class="doc-meta">${tr('נוצר','Created')} ${new Date(d.created_at).toLocaleString(locale)}</div></div><div class="doc-actions"><span class="${badge}">${state}</span>${d.status==='signed'?`<button class="doc-download" data-download="${escapeHtml(d.signed_path)}" data-name="${escapeHtml(d.title)}">${tr('הורדה','Download')}</button>`:''}${d.status==='pending'&&!expired?`<button class="action-cancel" data-cancel="${d.id}"><span aria-hidden="true">↶</span>${tr('ביטול','Cancel')}</button>`:''}<button class="action-delete" data-delete="${d.id}"><span aria-hidden="true">⌫</span>${tr('מחיקה','Delete')}</button></div></div>`}).join('');
@@ -260,9 +266,17 @@
       try{status(signingRequest?tr('שולח את המסמך החתום...','Sending the signed document...'):tr('יוצר את הקובץ החתום...','Creating the signed document...'));const blob=await buildSignedPdf();if(signingRequest){const uploaded=await db.storage.from(STORAGE_BUCKET).upload(signingRequest.signed_path,blob,{contentType:'application/pdf',upsert:false});if(uploaded.error)throw uploaded.error;const completed=await db.rpc('complete_sign_request',{p_token:signingToken});if(completed.error)throw completed.error;$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';actionToolbar.classList.add('hidden');$('hint').classList.add('hidden');if(eventFlow){await eventFlow.completed()}else{$('signerCard').insertAdjacentHTML('beforeend',`<div class="signer-success"><strong>${tr('המסמך נחתם ונשלח בהצלחה','The document was signed and sent successfully')}</strong><br>${tr('אפשר לסגור את החלון.','You can close this window.')}</div>`)}status(tr('החתימה הושלמה בהצלחה.','Signing completed successfully.'))}else{saveBlob(blob,currentFileName.replace(/\.pdf$/i,'')+tr('-חתום.pdf','-signed.pdf'));status(tr('הקובץ החתום הורד בהצלחה.','The signed file was downloaded successfully.'))}}catch(e){console.error(e);status(tr('אירעה שגיאה בשליחת הקובץ החתום: ','An error occurred while sending the signed file: ')+(e.message||''),true);button.disabled=false}
     };
 
-    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title=tr('חתימה על PDF','Sign PDF');signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('שינוי מיקום','Change position'):tr('מיקום חתימה','Place signature');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render()}if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
+    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title=tr('חתימה על PDF','Sign PDF');signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('שינוי מיקום','Change position'):tr('מיקום חתימה','Place signature');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render();accountControls?.render()}if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
     $('hebrewBtn').onclick=()=>setLanguage('he');$('englishBtn').onclick=()=>setLanguage('en');
-    db.auth.onAuthStateChange((event,session)=>{if(!signingToken&&!eventToken&&event==='SIGNED_IN'&&session?.user&&ownerId&&ownerId!==session.user.id)setTimeout(()=>{showOwner(session.user);finishStartup()},0)});
+    db.auth.onAuthStateChange((event,session)=>{
+      if(signingToken||eventToken||!ownerId)return;
+      if(event==='SIGNED_OUT'){$('appContent').classList.add('hidden');accountControls?.remove();location.reload();return}
+      if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(event)&&session?.user)setTimeout(()=>{
+        if(ownerId!==session.user.id)showOwner(session.user);
+        else{accountControls?.setUser(session.user);$('deviceNotice').classList.toggle('hidden',!session.user.is_anonymous)}
+        finishStartup();
+      },0);
+    });
     await initialize();
     }
     startApp().catch(showStartupError);
