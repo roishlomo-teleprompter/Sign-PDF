@@ -54,7 +54,6 @@ create policy "owners can view requests"
   to authenticated
   using (
     (select auth.uid()) = owner_id
-    and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) is false
   );
 
 drop policy if exists "claimed signers can view requests" on public.sign_requests;
@@ -75,7 +74,6 @@ create policy "owners can delete requests"
   to authenticated
   using (
     (select auth.uid()) = owner_id
-    and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) is false
   );
 
 -- A private PDF-only bucket with a 25 MB limit.
@@ -100,7 +98,6 @@ create policy "owners can read their PDFs"
   using (
     bucket_id = 'sign-pdf-documents'
     and (storage.foldername(name))[1] = (select auth.uid())::text
-    and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) is false
   );
 
 drop policy if exists "owners can upload original PDFs" on storage.objects;
@@ -118,7 +115,6 @@ create policy "owners can upload original PDFs"
         and sr.status = 'pending'
         and sr.expires_at > now()
     )
-    and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) is false
   );
 
 drop policy if exists "owners can delete their PDFs" on storage.objects;
@@ -129,7 +125,6 @@ create policy "owners can delete their PDFs"
   using (
     bucket_id = 'sign-pdf-documents'
     and (storage.foldername(name))[1] = (select auth.uid())::text
-    and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) is false
   );
 
 drop policy if exists "claimed signers can read original PDFs" on storage.objects;
@@ -188,10 +183,6 @@ declare
 begin
   if v_user_id is null then
     raise exception 'Authentication required';
-  end if;
-
-  if coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
-    raise exception 'A permanent account is required';
   end if;
 
   if p_expires_at <= now() or p_expires_at > now() + interval '30 days' then
@@ -326,9 +317,8 @@ security definer
 set search_path = ''
 as $$
 begin
-  if auth.uid() is null
-     or coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
-    raise exception 'A permanent account is required';
+  if auth.uid() is null then
+    raise exception 'Authentication required';
   end if;
 
   update public.sign_requests sr
