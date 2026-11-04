@@ -58,7 +58,7 @@
       <div class="card-title" data-he="בחירת קובץ PDF" data-en="Choose a PDF file">בחירת קובץ PDF</div>
       <div class="upload-row"><button class="primary-link" id="createLinkBtn" type="button" disabled data-he="יצירת קישור לחתימה" data-en="Create signing link">יצירת קישור לחתימה</button><label class="upload" id="dropZone"><input id="fileInput" type="file" accept="application/pdf,.pdf"><strong data-he="לחץ לבחירת מסמך" data-en="Click to choose a document">לחץ לבחירת מסמך</strong><span data-he="המסמך יהיה זמין רק באמצעות הקישור הייחודי" data-en="The document will only be available through its unique link">המסמך יהיה זמין רק באמצעות הקישור הייחודי</span><span class="selected-file" id="selectedFile"></span><span class="upload-success" id="uploadSuccess"><span class="upload-check" aria-hidden="true">✓</span><span data-he="הקובץ הועלה בהצלחה" data-en="File uploaded successfully">הקובץ הועלה בהצלחה</span></span></label></div>
       <div id="uploadError" class="status error" role="alert" aria-live="polite"></div>
-      <div class="link-result hidden" id="linkResult"><strong data-he="הקישור מוכן לשליחה:" data-en="The signing link is ready:">הקישור מוכן לשליחה:</strong><div class="link-box"><input id="signingLink" type="text" readonly><button id="emailLinkBtn" type="button" data-he="פתיחה במייל" data-en="Open email">פתיחה במייל</button><button class="primary" id="copyLinkBtn" type="button" data-he="העתקה" data-en="Copy">העתקה</button></div></div>
+      <div class="link-result hidden" id="linkResult"><strong data-he="הקישור מוכן לשליחה:" data-en="The signing link is ready:">הקישור מוכן לשליחה:</strong><div class="link-box"><input id="signingLink" type="text" readonly><button id="emailLinkBtn" type="button" data-he="שליחה באימייל" data-en="Send by email">שליחה באימייל</button><button class="primary" id="copyLinkBtn" type="button" data-he="העתקה" data-en="Copy">העתקה</button></div></div>
     </section>
     <section class="signer-card hidden" id="signerCard">
       <div class="privacy"><span aria-hidden="true">🔒</span><span data-he="המסמך נשמר באחסון פרטי ומוגן באמצעות קישור ייחודי." data-en="The document is kept in private storage and protected by a unique link.">המסמך נשמר באחסון פרטי ומוגן באמצעות קישור ייחודי.</span></div>
@@ -98,6 +98,7 @@
   <script src="./pdf-transfer.js"></script>
   <script src="./events.js"></script>
   <script src="./account-auth.js"></script>
+  <script src="./gmail-mail.js"></script>
   <script>
     async function startApp(){
     if(!window.supabase?.createClient||!window.pdfjsLib||!window.PDFLib)throw new Error('A required application library did not load');
@@ -145,6 +146,7 @@
       if(googleCallbackError)accountControls?.showError(googleCallbackError);
       window.AccountAuth?.cleanCallback();
       finishStartup();
+      if(user&&!user.is_anonymous)await window.GmailMail?.resume({db,ownerId:user.id,tr});
     }
 
     async function initializeEventSigner(){
@@ -212,7 +214,7 @@
         $('uploadError').textContent=PdfTransfer.message(error,tr);
       }finally{$('uploadCard').classList.remove('loading');button.textContent=tr('יצירת קישור לחתימה','Create signing link');button.disabled=!selectedUpload}
     };
-    $('emailLinkBtn').onclick=()=>{location.href='mailto:?subject='+encodeURIComponent(tr('מסמך לחתימה','Document to sign'))+'&body='+encodeURIComponent($('signingLink').value)};
+    $('emailLinkBtn').onclick=()=>GmailMail.compose({db,ownerId,tr,subject:tr('מסמך לחתימה','Document to sign'),body:tr('שלום, מצורף קישור למסמך לחתימה:','Hello, please sign the document using this link:')+'\n'+$('signingLink').value}).catch(e=>{$('uploadError').textContent=e.message});
     $('copyLinkBtn').onclick=async()=>{const input=$('signingLink');try{await navigator.clipboard.writeText(input.value)}catch(e){input.select();document.execCommand('copy')}$('copyLinkBtn').textContent=tr('הועתק!','Copied!');setTimeout(()=>$('copyLinkBtn').textContent=tr('העתקה','Copy'),1600)};
 
     async function loadDocuments(){
@@ -278,7 +280,7 @@
     $('hebrewBtn').onclick=()=>setLanguage('he');$('englishBtn').onclick=()=>setLanguage('en');
     db.auth.onAuthStateChange((event,session)=>{
       if(signingToken||eventToken)return;
-      if(event==='SIGNED_OUT'){$('appContent').classList.add('hidden');accountControls?.remove();location.reload();return}
+      if(event==='SIGNED_OUT'){window.GmailMail?.close();$('appContent').classList.add('hidden');accountControls?.remove();location.reload();return}
       if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(event)&&session?.user)setTimeout(()=>{
         if(session.user.is_anonymous){showLogin(session.user);finishStartup();return}
         if(ownerId!==session.user.id)showOwner(session.user);
