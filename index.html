@@ -105,6 +105,7 @@
   <script src="./vendor/pdf-lib.min.js"></script>
   <script src="./vendor/supabase.js" crossorigin="anonymous"></script>
   <script src="./pdf-transfer.js"></script>
+  <script src="./drive-storage.js"></script>
   <script src="./events.js"></script>
   <script src="./account-auth.js"></script>
   <script src="./gmail-mail.js"></script>
@@ -121,7 +122,7 @@
     const pageToolbar=$('pageToolbar'),actionToolbar=$('actionToolbar'),pageInfo=$('pageInfo'),statusEl=$('status'),signatureLayer=$('signatureLayer'),signatureImg=$('signatureImg');
     let signingToken=new URLSearchParams(location.search).get('sign');
     const eventToken=new URLSearchParams(location.search).get('event');
-    let eventFlow=null,eventDashboard=null,accountControls=null;
+    let eventFlow=null,eventDashboard=null,accountControls=null,driveStore=null;
     const googleCallbackError=window.AccountAuth?.callbackError();
     let selectedUpload=null,signingRequest=null,pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.15,baseFitScale=1,viewerMode='fit',signatureData=null,placement=null,drag=null,currentFileName='document.pdf',signingDate='',currentLang='he',ownerId=null,ownerDocs=[];
 
@@ -178,14 +179,15 @@
     }
 
     function showLogin(user){
-      ownerId=null;document.body.classList.add('login-mode');
+      driveStore?.dispose();driveStore=null;ownerId=null;document.body.classList.add('login-mode');
       $('appContent').classList.add('hidden');eventDashboard?.remove();eventDashboard=null;
       accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,gate:true});
     }
     function showOwner(user){
       if(!user||user.is_anonymous){showLogin(user);return}
       if(ownerId===user.id&&eventDashboard){accountControls?.setUser(user);return}
-      document.body.classList.remove('login-mode');ownerId=user.id;
+      document.body.classList.remove('login-mode');ownerId=user.id;driveStore?.dispose();driveStore=window.DriveStorage?.enabled(user)?DriveStorage.create(db):null;
+      document.getElementById('driveStorageNotice')?.remove();if(driveStore)$('uploadCard').insertAdjacentHTML('afterbegin','<p id="driveStorageNotice" class="hint">'+tr('מסמכים חדשים נשמרים ב-Google Drive שלך ובגיליון SignWay-Pilot. PDF עד 5MB.','New documents are saved in your Google Drive and SignWay-Pilot sheet. PDFs up to 5MB.')+'</p>');
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
@@ -222,6 +224,7 @@
       const button=$('createLinkBtn');button.disabled=true;button.textContent=tr('מעלה את המסמך...','Uploading document...');$('uploadCard').classList.add('loading');
       let request=null;const uploadFile=selectedUpload;$('uploadError').textContent='';
       try{
+        if(driveStore){const saved=await driveStore.upload(uploadFile);$('signingLink').value=saved.url;$('linkResult').classList.remove('hidden');$('selfSignBtn').disabled=true;selectedUpload=null;fileInput.value='';$('selectedFile').textContent=uploadFile.name;dropZone.classList.add('uploaded');await loadDocuments();return}
         const expires=new Date(Date.now()+7*24*60*60*1000).toISOString();
         const created=await db.rpc('create_sign_request',{p_title:uploadFile.name,p_expires_at:expires});
         if(created.error||!created.data?.length)throw created.error||new Error(tr('לא ניתן ליצור בקשה','Could not create the request'));
@@ -239,17 +242,18 @@
     $('copyLinkBtn').onclick=async()=>{const input=$('signingLink');try{await navigator.clipboard.writeText(input.value)}catch(e){input.select();document.execCommand('copy')}$('copyLinkBtn').textContent=tr('הועתק!','Copied!');setTimeout(()=>$('copyLinkBtn').textContent=tr('העתקה','Copy'),1600)};
 
     async function loadDocuments(){
-      const expectedOwner=ownerId,list=$('documentsList');list.innerHTML=`<div class="empty-docs">${tr('טוען מסמכים...','Loading documents...')}</div>`;
+      const expectedOwner=ownerId,expectedDrive=driveStore,list=$('documentsList');list.innerHTML=`<div class="empty-docs">${tr('טוען מסמכים...','Loading documents...')}</div>`;
+      let driveDocs=[];if(expectedDrive){try{driveDocs=await expectedDrive.call('list')}catch(e){if(ownerId===expectedOwner)list.innerHTML='<div class="empty-docs">'+escapeHtml(e.message)+'</div>';return}}
       const {data,error}=await db.from('sign_requests').select('id,title,status,original_path,signed_path,expires_at,signed_at,created_at').eq('owner_id',expectedOwner).order('created_at',{ascending:false});
-      if(ownerId!==expectedOwner)return;
-      if(error){list.innerHTML=`<div class="empty-docs">${tr('לא ניתן לטעון את המסמכים','Could not load documents')}</div>`;return}
-      ownerDocs=data||[];const visibleDocs=ownerDocs.filter(d=>!eventDashboard?.managed(d.id));if(!visibleDocs.length){list.innerHTML=`<div class="empty-docs">${tr('עדיין אין מסמכים','No documents yet')}</div>`;return}
-      const locale=currentLang==='he'?'he-IL':'en-US';list.innerHTML=visibleDocs.map(d=>{const expired=d.status==='pending'&&new Date(d.expires_at)<new Date(),state=expired?tr('פג תוקף','Expired'):d.status==='signed'?tr('נחתם','Signed'):d.status==='cancelled'?tr('בוטל','Cancelled'):tr('ממתין לחתימה','Awaiting signature'),badge=d.status==='signed'?'badge':d.status==='cancelled'||expired?'badge cancelled-badge':'badge pending-badge';return `<div class="doc-row"><div><div class="doc-name">${escapeHtml(d.title)}</div><div class="doc-meta">${tr('נוצר','Created')} ${new Date(d.created_at).toLocaleString(locale)}</div></div><div class="doc-actions"><span class="${badge}">${state}</span>${d.status==='signed'?`<button class="doc-download" data-download="${escapeHtml(d.signed_path)}" data-name="${escapeHtml(d.title)}">${tr('הורדה','Download')}</button>`:''}${d.status==='pending'&&!expired?`<button class="action-cancel" data-cancel="${d.id}"><span aria-hidden="true">↶</span>${tr('ביטול','Cancel')}</button>`:''}<button class="action-delete" data-delete="${d.id}"><span aria-hidden="true">⌫</span>${tr('מחיקה','Delete')}</button></div></div>`}).join('');
+      if(ownerId!==expectedOwner||driveStore!==expectedDrive)return;
+      if(error&&!expectedDrive){list.innerHTML=`<div class="empty-docs">${tr('לא ניתן לטעון את המסמכים','Could not load documents')}</div>`;return}
+      ownerDocs=[...driveDocs,...(data||[])].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));const visibleDocs=ownerDocs.filter(d=>!eventDashboard?.managed(d.id));if(!visibleDocs.length){list.innerHTML=`<div class="empty-docs">${tr('עדיין אין מסמכים','No documents yet')}</div>`;return}
+      const locale=currentLang==='he'?'he-IL':'en-US';list.innerHTML=visibleDocs.map(d=>{const expired=d.status==='pending'&&new Date(d.expires_at)<new Date(),state=expired?tr('פג תוקף','Expired'):d.status==='signed'?tr('נחתם','Signed'):d.status==='cancelled'?tr('בוטל','Cancelled'):tr('ממתין לחתימה','Awaiting signature'),badge=d.status==='signed'?'badge':d.status==='cancelled'||expired?'badge cancelled-badge':'badge pending-badge';return `<div class="doc-row"><div><div class="doc-name">${escapeHtml(d.title)}</div><div class="doc-meta">${d.backend==='drive'?'Google Drive · ':''}${tr('נוצר','Created')} ${new Date(d.created_at).toLocaleString(locale)}</div></div><div class="doc-actions"><span class="${badge}">${state}</span>${d.status==='signed'?`<button class="doc-download" data-download="${escapeHtml(d.signed_path)}" data-name="${escapeHtml(d.title)}" data-document-id="${d.id}">${tr('הורדה','Download')}</button>`:''}${d.status==='pending'&&!expired?`<button class="action-cancel" data-cancel="${d.id}"><span aria-hidden="true">↶</span>${tr('ביטול','Cancel')}</button>`:''}<button class="action-delete" data-delete="${d.id}"><span aria-hidden="true">⌫</span>${tr('מחיקה','Delete')}</button></div></div>`}).join('');
     }
     $('documentsList').addEventListener('click',async e=>{
-      const download=e.target.closest('[data-download]');if(download){download.disabled=true;const result=await db.storage.from(STORAGE_BUCKET).download(download.dataset.download);download.disabled=false;if(result.error){alert(tr('ההורדה נכשלה','Download failed'));return}saveBlob(result.data,(download.dataset.name||'document.pdf').replace(/\.pdf$/i,'')+tr('-חתום.pdf','-signed.pdf'))}
-      const cancel=e.target.closest('[data-cancel]');if(cancel&&await askConfirm(tr('ביטול קישור החתימה','Cancel signing link'),tr('לאחר הביטול לא יהיה ניתן להשתמש בקישור שנשלח.','The shared signing link will stop working.'),tr('בטל קישור','Cancel link'))){await db.rpc('cancel_sign_request',{p_request_id:cancel.dataset.cancel});loadDocuments()}
-      const remove=e.target.closest('[data-delete]');if(remove&&await askConfirm(tr('מחיקת המסמך','Delete document'),tr('המסמך המקורי והמסמך החתום יימחקו לצמיתות. לא ניתן לבטל פעולה זו.','The original and signed files will be permanently deleted. This cannot be undone.'),tr('מחק לצמיתות','Delete permanently'))){const doc=ownerDocs.find(d=>d.id===remove.dataset.delete);if(!doc)return;remove.disabled=true;const paths=[doc.original_path,doc.signed_path].filter(Boolean),files=await db.storage.from(STORAGE_BUCKET).remove(paths);if(files.error){alert(tr('מחיקת הקבצים נכשלה.','File deletion failed.'));remove.disabled=false;return}const deleted=await db.from('sign_requests').delete().eq('id',doc.id);if(deleted.error){alert(tr('מחיקת הרשומה נכשלה.','Record deletion failed.'));remove.disabled=false;return}await loadDocuments()}
+      const download=e.target.closest('[data-download]');if(download){const doc=ownerDocs.find(d=>d.id===download.dataset.documentId);if(doc?.backend==='drive'){download.disabled=true;try{const result=await driveStore.call('download',{id:doc.id});saveBlob(new Blob([Uint8Array.from(atob(result.base64),c=>c.charCodeAt(0))],{type:'application/pdf'}),doc.title.replace(/\.pdf$/i,'')+'-signed.pdf')}catch(e){alert(e.message)}finally{download.disabled=false}return}download.disabled=true;const result=await db.storage.from(STORAGE_BUCKET).download(download.dataset.download);download.disabled=false;if(result.error){alert(tr('ההורדה נכשלה','Download failed'));return}saveBlob(result.data,(download.dataset.name||'document.pdf').replace(/\.pdf$/i,'')+tr('-חתום.pdf','-signed.pdf'))}
+      const cancel=e.target.closest('[data-cancel]');if(cancel&&await askConfirm(tr('ביטול קישור החתימה','Cancel signing link'),tr('לאחר הביטול לא יהיה ניתן להשתמש בקישור שנשלח.','The shared signing link will stop working.'),tr('בטל קישור','Cancel link'))){const doc=ownerDocs.find(d=>d.id===cancel.dataset.cancel);if(doc?.backend==='drive'){try{await driveStore.call('cancel',{id:doc.id});await loadDocuments()}catch(e){alert(e.message)}return}await db.rpc('cancel_sign_request',{p_request_id:cancel.dataset.cancel});loadDocuments()}
+      const remove=e.target.closest('[data-delete]');if(remove&&await askConfirm(tr('מחיקת המסמך','Delete document'),tr('המסמך המקורי והמסמך החתום יימחקו לצמיתות. לא ניתן לבטל פעולה זו.','The original and signed files will be permanently deleted. This cannot be undone.'),tr('מחק לצמיתות','Delete permanently'))){const doc=ownerDocs.find(d=>d.id===remove.dataset.delete);if(!doc)return;remove.disabled=true;if(doc.backend==='drive'){try{await driveStore.call('delete',{id:doc.id});await loadDocuments()}catch(e){alert(e.message);remove.disabled=false}return}const paths=[doc.original_path,doc.signed_path].filter(Boolean),files=await db.storage.from(STORAGE_BUCKET).remove(paths);if(files.error){alert(tr('מחיקת הקבצים נכשלה.','File deletion failed.'));remove.disabled=false;return}const deleted=await db.from('sign_requests').delete().eq('id',doc.id);if(deleted.error){alert(tr('מחיקת הרשומה נכשלה.','Record deletion failed.'));remove.disabled=false;return}await loadDocuments()}
     });
     $('refreshBtn').onclick=loadDocuments;
 
