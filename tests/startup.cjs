@@ -15,7 +15,7 @@ async function boot(mode,search='',race=false){
  const db={auth:{getSession:()=>mode==='stalled'?new Promise(()=>{}):mode==='rejected'?Promise.reject(new Error('offline')):(race?new Promise(resolve=>setTimeout(()=>resolve({data:{session}}),15)):Promise.resolve({data:{session},error:mode==='auth-error'?new Error('auth failed'):mode==='expired'?Object.assign(new Error('invalid refresh token'),{code:'refresh_token_not_found'}):null})),onAuthStateChange:fn=>{if(race)fn('SIGNED_IN',session)},signInAnonymously:async()=>{calls.anonymous++;if(mode==='anonymous-failure')return {error:new Error('offline')};return {data:{session:{user:{id:'new-device',is_anonymous:true}}},error:null}}},from:()=>({select:()=>({eq:(column,value)=>{calls.filters.push([column,value]);return {order:async()=>({data:[],error:null})}}})}),rpc:async()=>mode==='completed'?{data:[{status:'signed',original_path:null,signed_path:null}],error:null}:{data:[],error:new Error('invalid test link')}};
  w.supabase=mode==='missing'?undefined:{createClient:()=>db};w.pdfjsLib={GlobalWorkerOptions:{}};w.PDFLib={};
  if(race)w.SignEvents={mount(){calls.mounts++;return {remove(){},render(){}}}};
- w.eval(fs.readFileSync('account-auth.js','utf8'));scripts.forEach(s=>w.eval(s));await new Promise(r=>setTimeout(r,35));
+ w.eval(fs.readFileSync('account-auth.js','utf8'));w.eval(fs.readFileSync('design-ui.js','utf8'));w.localStorage.setItem('signway-language','he');scripts.forEach(s=>w.eval(s));await new Promise(r=>setTimeout(r,35));
  return {w,dom,calls,visible:id=>!w.document.getElementById(id).classList.contains('hidden')};
 }
 for(const mode of ['guest','owner','anonymous','expired','missing','stalled','rejected','auth-error','anonymous-failure'])test('startup: '+mode,async()=>{
