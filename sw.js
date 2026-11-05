@@ -1,5 +1,5 @@
-const CACHE_VERSION='sign-pdf-shell-v26';
-const APP_SHELL=['./','./index.html','./events.js?v=25','./account-auth.js?v=25','./gmail-mail.js','./pdf-transfer.js','./events.css?v=25','./design.css?v=26','./design-ui.js','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
+const CACHE_VERSION='sign-pdf-shell-v27';
+const APP_SHELL=['./','./index.html','./events.js?v=25','./account-auth.js?v=25','./gmail-mail.js','./pdf-transfer.js','./events.css?v=25','./design.css?v=27','./design-ui.js?v=27','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_VERSION).then(cache=>cache.addAll(APP_SHELL.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting()));

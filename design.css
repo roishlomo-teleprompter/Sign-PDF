@@ -17,3 +17,47 @@
 .upload-row .upload:is(.uploaded,.file-ready):hover{background:linear-gradient(155deg,#50d5a7,#079162)}
 .upload-row .upload.pressed,.upload-row .upload:active{transform:translateY(3px) scale(.96);box-shadow:inset 0 7px 17px #061c4b4d,inset 0 -2px 7px #ffffff26,0 0 0 10px var(--upload-rim),0 0 0 23px var(--upload-halo),0 4px 9px var(--upload-shadow)}
 @media(prefers-reduced-motion:reduce){.upload-row .upload{transition:none}}
+/* One visible workflow at a time. */
+body[data-flow=self] #uploadCard{display:none!important}
+body[data-flow=self] .intro{display:none!important}
+body[data-flow=link] #signerCard{display:none!important}
+body[data-flow=link] .upload-actions{display:none!important}
+body[data-flow=link] .upload-note{display:none}
+body[data-flow=link] .upload-row .upload{width:150px;height:150px;margin:12px 0 0}
+body[data-flow=link] .upload-symbol svg{width:43px;height:43px}
+body[data-flow=link] .upload-row .upload strong{font-size:16px}
+.upload-row .upload:is(.file-ready,.uploaded) strong{font-size:18px;line-height:1.5;max-width:185px}
+.upload-row .upload:is(.file-ready,.uploaded) .upload-symbol svg{width:58px;height:58px}
+.result-heading{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px}
+.result-heading strong{margin:0;font-size:18px;color:#182649}
+.result-check{width:38px;height:38px;display:inline-grid;place-items:center;border-radius:50%;background:#ddf5eb;color:#069166;font-size:24px;font-weight:800;flex-shrink:0}
+.link-result{border:1px solid #e0e6f0;border-radius:22px;padding:24px 18px;background:white;box-shadow:0 7px 22px #203f7409}
+.link-url{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+.share-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.share-options button{min-width:0;min-height:90px;padding:14px 5px;display:flex;flex-direction:column;gap:9px;border-radius:17px;background:#f5f8ff;color:#2455f5;border:1px solid #e4eafa;font-size:14px}
+.share-options button svg{width:30px;height:30px}
+.share-options .whatsapp-action{color:#129366;background:#f0faf6;border-color:#dcefe5}
+.text-action{margin:15px auto 0;display:flex;background:transparent;color:#768099;font-size:13px;padding:7px 14px;min-height:36px}
+#selfSignSummary{text-align:center;padding:12px 0 18px}
+#selfSignSummary h2{margin:12px 0 0;font-size:23px;color:#111d40}
+body[data-flow=self] .signer-card{max-width:600px;margin:25px auto}
+body[data-flow=self] .signer-heading{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;gap:0}
+body[data-flow=self] #signerFileTitle{text-align:center;font-size:14px;font-weight:500;color:#75819b;line-height:1.6;margin:0;max-width:100%;overflow-wrap:anywhere}
+body[data-flow=self] .signer-heading #newBtn{position:static;margin:8px 0 0;color:#75819b}
+body[data-flow=self] #actionToolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+body[data-flow=self] #actionToolbar>button{grid-column:auto!important;min-height:96px;display:flex;flex-direction:column;padding:15px 5px;gap:10px;background:#f5f8ff;border:1px solid #e1e8fb;border-radius:17px;color:#2455f5;font-size:14px;order:0}
+body[data-flow=self] #actionToolbar>button svg{width:30px;height:30px}
+body[data-flow=self] #actionToolbar #downloadBtn{background:#effaf5;color:#0c9368;border-color:#dcefe5;order:3}
+body[data-flow=self] #actionToolbar #saveSignedBtn{order:2}
+body[data-flow=self] #actionToolbar #drawBtn{order:1}
+body[data-flow=self]:not(.signed-ready) #actionToolbar #drawBtn{grid-column:1/-1!important;background:#2455f5;color:#fff}
+body[data-flow=self]:not(.signed-ready) #actionToolbar #downloadBtn{display:none}
+body[data-flow=self] #actionToolbar .hidden{display:none!important}
+body[data-flow=self] #status:not(.error){display:none}
+@media(max-width:380px){.share-options,body[data-flow=self] #actionToolbar{gap:8px}.share-options button,body[data-flow=self] #actionToolbar>button{font-size:13px}}
+body[data-flow=self] #actionToolbar #drawBtn,body[data-flow=self] #actionToolbar #saveSignedBtn,body[data-flow=self] #actionToolbar #downloadBtn{grid-column:auto!important;justify-self:stretch;box-shadow:none}
+body[data-flow=self]:not(.signed-ready) #actionToolbar #drawBtn{grid-column:1/-1!important}
+body[data-flow=self] #actionToolbar>button{min-width:0}
+body[data-flow=link] .upload-row .upload{padding:17px 10px;gap:7px}
+body[data-flow=link] .upload-row .upload strong{font-size:15px;line-height:1.35}
+body[data-flow=link] .upload-row .upload .upload-symbol svg{width:43px;height:43px}
