@@ -58,7 +58,7 @@
 .signer-card #status.completed{display:block!important;color:#087b62;font-weight:600;padding:18px;background:#eefaf5;border-radius:14px}
 </style>
   <link rel="stylesheet" href="events.css?v=25">
-  <link rel="stylesheet" href="design.css?v=28">
+  <link rel="stylesheet" href="design.css?v=29">
   <script src="design-ui.js?v=27"></script>
 </head>
 <body>
@@ -84,6 +84,7 @@
     </div>
   </main>
   <dialog id="signDialog"><div class="modal"><h2 data-he="צייר את החתימה" data-en="Draw your signature">צייר את החתימה</h2><p data-he="חתום באצבע, בעכבר או בעט דיגיטלי." data-en="Sign with your finger, mouse, or digital pen.">חתום באצבע, בעכבר או בעט דיגיטלי.</p><canvas id="signPad"></canvas><div class="modal-actions"><button class="primary" id="useSignature" type="button" data-he="השתמש בחתימה" data-en="Use signature">השתמש בחתימה</button><button id="clearPad" type="button" data-he="נקה" data-en="Clear">נקה</button><button id="cancelSign" type="button" data-he="ביטול" data-en="Cancel">ביטול</button></div></div></dialog>
+  <dialog id="repeatDownloadDialog" class="download-dialog" aria-labelledby="repeatDownloadTitle"><div class="modal"><div class="download-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-4-4 4 4 4-4M3 16v5h18v-5"/></svg></div><h2 id="repeatDownloadTitle" data-he="לשמור עותק נוסף?" data-en="Save another copy?">לשמור עותק נוסף?</h2><p data-he="כבר ביקשת לשמור את המסמך הזה. העותק הנוסף יקבל שם נפרד." data-en="You already requested a download of this document. The next copy will have a separate name.">כבר ביקשת לשמור את המסמך הזה. העותק הנוסף יקבל שם נפרד.</p><div class="download-filename"><bdi id="repeatDownloadName"></bdi></div><div class="modal-actions"><button id="repeatDownloadYes" class="primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M3 16v5h18v-5"/></svg><span data-he="שמירת עותק" data-en="Save copy">שמירת עותק</span></button><button id="repeatDownloadNo" type="button" data-he="ביטול" data-en="Cancel">ביטול</button></div></div></dialog>
   <dialog id="confirmDialog" class="confirm-dialog"><div class="modal"><div class="confirm-icon" aria-hidden="true">!</div><h2 id="confirmTitle"></h2><p id="confirmMessage"></p><div class="modal-actions"><button class="confirm-yes" id="confirmYes" type="button"></button><button class="confirm-no" id="confirmNo" type="button"></button></div></div></dialog>
   <script>
     let startupComplete=false;
@@ -204,7 +205,7 @@
     function updateSignAction(){$('saveSignedBtn').classList.toggle('hidden',!signedFile);document.body.classList.toggle('signed-ready',!!signedFile);actionButton('downloadBtn',signingRequest?'send':signedFile?'send':'file',signingRequest?tr('אישור ושליחת החתימה','Confirm and send signature'):signedFile?tr('שיתוף','Share'):tr('הכנת המסמך','Prepare document'));actionButton('saveSignedBtn','download',tr('שמירה','Save'));actionButton('drawBtn','pen',signatureData?tr('עריכה','Edit'):tr('חתימה','Sign'));$('selfSignSummary').classList.toggle('hidden',!signedFile||!!signingRequest);$('selfSignSummary').innerHTML=signedFile&&!signingRequest?'<span class="result-check" aria-hidden="true">✓</span><h2>'+tr('המסמך החתום מוכן','Your signed document is ready')+'</h2>':'';refreshUploadLabel()}
 
     $('selfSignBtn').onclick=async()=>{if(!selectedUpload)return;const prepared=selectedUpload;setFlow('self');$('signingLink').value='';pdfDoc=null;signingRequest=null;clearSignedOutput();$('selfSignBtn').disabled=true;await openPdf(new File([prepared.bytes],prepared.name,{type:'application/pdf'}));$('selfSignBtn').disabled=!selectedUpload;updateSignAction();if(pdfDoc)await openPlacementViewer()};
-    $('saveSignedBtn').onclick=()=>{if(signedFile)saveBlob(signedFile,signedFile.name)};
+    $('saveSignedBtn').onclick=async()=>{if(!signedFile)return;const button=$('saveSignedBtn'),file=signedFile;button.disabled=true;try{await saveBlob(file,file.name)}catch(error){status(tr('לא ניתן להתחיל את ההורדה. נסו שוב.','Could not start the download. Please try again.'),true)}finally{button.disabled=false}};
     $('shareSignedBtn').onclick=async()=>{
       if(!signedFile)return;
       try{if(!navigator.share||!navigator.canShare?.({files:[signedFile]})){status(tr('הדפדפן אינו תומך בשיתוף קבצים. לחצו על שמירת PDF חתום וצרפו אותו במייל או בוואטסאפ.','This browser cannot share files. Save the signed PDF and attach it to email or WhatsApp.'),true);return}
@@ -306,7 +307,10 @@
     $('newBtn').onclick=()=>location.href=location.origin+location.pathname;
 
     async function buildSignedPdf(){if(!signatureData||!placement)throw new Error(tr('יש למקם ולצייר חתימה תחילה','Place and draw a signature first'));const doc=await PDFLib.PDFDocument.load(pdfBytes.slice()),png=await doc.embedPng(signatureData),font=await doc.embedFont(PDFLib.StandardFonts.Helvetica),page=doc.getPages()[placement.page-1],dateText=signingDate||new Date().toLocaleDateString('he-IL'),width=page.getWidth(),height=page.getHeight(),boxX=placement.x*width,boxY=height-(placement.y+placement.h)*height,boxW=placement.w*width,boxH=placement.h*height,sigH=Math.max(20,boxH*.72),sigW=Math.min(boxW*.66,sigH*(png.width/png.height)),sigX=boxX+boxW-sigW-4,sigY=boxY+(boxH-sigH)/2;page.drawImage(png,{x:sigX,y:sigY,width:sigW,height:sigH});const dateSize=Math.max(7,Math.min(11,boxH*.22)),dateWidth=font.widthOfTextAtSize(dateText,dateSize);page.drawText(dateText,{x:Math.max(boxX+3,sigX-dateWidth-8),y:boxY+(boxH-dateSize)/2,size:dateSize,font,color:PDFLib.rgb(.12,.20,.17)});return new Blob([await doc.save()],{type:'application/pdf'})}
-    function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}
+    const downloadAttempts=new Set();let repeatDownloadOpen=false,downloadSequence=0;
+    function confirmRepeatDownload(name){if(repeatDownloadOpen)return Promise.resolve(false);repeatDownloadOpen=true;return new Promise(resolve=>{const dialog=$('repeatDownloadDialog');$('repeatDownloadName').textContent=name;const finish=confirmed=>{dialog.close();repeatDownloadOpen=false;resolve(confirmed)};$('repeatDownloadYes').onclick=()=>finish(true);$('repeatDownloadNo').onclick=()=>finish(false);dialog.oncancel=event=>{event.preventDefault();finish(false)};dialog.showModal();$('repeatDownloadNo').focus()})}
+    async function saveBlob(blob,name){if(downloadAttempts.has(name)&&!await confirmRepeatDownload(name))return false;const time=new Date(),stamp=[time.getFullYear(),String(time.getMonth()+1).padStart(2,'0'),String(time.getDate()).padStart(2,'0'),'-',String(time.getHours()).padStart(2,'0'),String(time.getMinutes()).padStart(2,'0'),String(time.getSeconds()).padStart(2,'0'),'-',String(time.getMilliseconds()).padStart(3,'0')].join(''),nonce=crypto.getRandomValues(new Uint32Array(1))[0].toString(16),suffix=stamp+'-'+nonce+'-'+(++downloadSequence),filename=name.replace(/\.pdf$/i,'')+'-'+suffix+'.pdf',url=URL.createObjectURL(blob),a=document.createElement('a');try{a.href=url;a.download=filename;document.body.append(a);a.click();downloadAttempts.add(name)}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}return true}
+
     $('downloadBtn').onclick=async()=>{
       if(signedFile&&!signingRequest){await $('shareSignedBtn').onclick();return}
       const button=$('downloadBtn'),version=artifactVersion;button.disabled=true;
