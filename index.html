@@ -96,9 +96,8 @@
     function finishStartup(){startupComplete=true;clearTimeout(startupWatchdog);document.getElementById('startupCard').classList.add('hidden')}
     // Register independently of app initialization so a broken cached app can update.
     if('serviceWorker' in navigator){
-      const wasControlled=!!navigator.serviceWorker.controller;
-      let reloading=false;
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{if(wasControlled&&!reloading){reloading=true;location.reload()}});
+      // Updates may claim this page while the native file picker is open.
+      // Keep the current document and in-memory PDF state; use the new shell on next navigation.
       window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(console.error));
     }
   </script>
