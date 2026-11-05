@@ -55,6 +55,7 @@
 
     .signer-card{padding:20px}.signer-card #signerFileTitle{font-size:1rem;line-height:1.5;margin:0 0 16px;color:#182b4e;overflow-wrap:anywhere}.signer-card #hint{display:none!important}.signer-card #status:not(.error){display:none}#actionToolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0}#actionToolbar.hidden{display:none}#actionToolbar #downloadBtn{grid-column:1/-1!important;order:1}#actionToolbar #drawBtn{grid-column:1!important;order:2;background:#eef3ff;color:#234fb2;box-shadow:none}#actionToolbar #saveSignedBtn{grid-column:2!important;order:2;background:#eef3ff;color:#234fb2;min-height:48px;border-radius:13px}#actionToolbar #removeBtn{grid-column:1!important;order:3;min-height:36px;border:0;font-size:.8rem;padding:8px;background:transparent}#actionToolbar #newBtn{grid-column:2!important;order:3;min-height:36px;font-size:.8rem;padding:8px}#actionToolbar #drawBtn:only-child{grid-column:1/-1!important}.signer-card #signedOutput{display:none}.signer-card #status.error{margin:12px 0 0;font-size:.85rem}.upload-card{margin-bottom:16px}.signer-card{margin-bottom:16px}
 .signer-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}.signer-heading #newBtn{flex-shrink:0;background:transparent;color:#6a7890;font-size:.75rem;padding:4px 0;border:0}.viewer-confirm-bar #removeBtn{background:transparent;color:#ae382f;border:0;min-height:36px;font-size:.8rem;margin-bottom:6px}.viewer-confirm-bar #removeBtn.hidden{display:none}
+.signer-card #status.completed{display:block!important;color:#087b62;font-weight:600;padding:18px;background:#eefaf5;border-radius:14px}
 </style>
   <link rel="stylesheet" href="events.css">
 </head>
@@ -170,7 +171,7 @@
         await getDeviceSession();
         const {data,error}=await db.rpc('claim_sign_request',{p_token:signingToken});
         if(error||!data?.length)throw error||new Error(tr('הקישור אינו תקין','The link is invalid'));
-        if(data[0].status==='signed'){status(tr('המסמך כבר נחתם ונשלח בהצלחה. אין צורך לחתום שוב.','This document has already been signed and sent successfully. No further signature is needed.'));return}
+        if(data[0].status==='signed'){status(tr('המסמך כבר נחתם ונשלח בהצלחה. אין צורך לחתום שוב.','This document has already been signed and sent successfully. No further signature is needed.'));statusEl.classList.add('completed');return}
         signingRequest=data[0];
         const download=await db.storage.from(STORAGE_BUCKET).download(signingRequest.original_path);
         if(download.error)throw download.error;
