@@ -58,7 +58,7 @@ function appOwner_(accessToken){
  if(typeof accessToken!=='string'||accessToken.length<30||accessToken.length>8192)throw new Error('נדרשת התחברות מחדש לאפליקציה.');
  const result=UrlFetchApp.fetch('https://yybpppkxniizxbeettpp.supabase.co/auth/v1/user',{headers:{apikey:'sb_publishable_VHrjc5o3jYTfJkR0Y9gZHQ_5DebiLY7',Authorization:'Bearer '+accessToken},muteHttpExceptions:true});
  if(result.getResponseCode()!==200)throw new Error('ההתחברות פגה. התחברו מחדש.');
- const user=JSON.parse(result.getContentText()),owner=Session.getEffectiveUser().getEmail().toLowerCase();
+ const user=JSON.parse(result.getContentText()),owner=DriveApp.getFileById(config_().SHEET_ID).getOwner().getEmail().toLowerCase();
  if(!owner||user.is_anonymous||!user.email_confirmed_at||String(user.email||'').toLowerCase()!==owner||!(user.identities||[]).some(i=>i.provider==='google'))throw new Error('אחסון Drive זה זמין רק לבעל ההתקנה.');
  return user.id;
 }
