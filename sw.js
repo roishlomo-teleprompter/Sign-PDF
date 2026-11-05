@@ -1,4 +1,4 @@
-const CACHE_VERSION='sign-pdf-shell-v20';
+const CACHE_VERSION='sign-pdf-shell-v21';
 const APP_SHELL=['./','./index.html','./events.js','./account-auth.js','./gmail-mail.js','./pdf-transfer.js','./events.css','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
 
 self.addEventListener('install',event=>{
