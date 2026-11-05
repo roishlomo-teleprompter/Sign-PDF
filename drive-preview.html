@@ -223,7 +223,7 @@ window.DriveStorage=(()=>{
       document.getElementById('driveStorageNotice')?.remove();if(driveStore)$('uploadCard').insertAdjacentHTML('afterbegin','<p id="driveStorageNotice" class="hint">'+tr('מסמכים חדשים נשמרים ב-Google Drive שלך ובגיליון SignWay-Pilot. PDF עד 5MB.','New documents are saved in your Google Drive and SignWay-Pilot sheet. PDFs up to 5MB.')+'</p>');
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
-      if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
+      // Drive validation page exposes standalone PDFs only; event uploads still use the legacy backend.
       if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr})}
     }
 
@@ -254,6 +254,7 @@ window.DriveStorage=(()=>{
 
     $('createLinkBtn').onclick=async()=>{
       if(!selectedUpload)return;
+      if(!driveStore){$('uploadError').textContent='בדיקת Drive זמינה רק בחשבון roi.shlomo@gmail.com. התחברו לחשבון הזה. לא נשמר מסמך במסלול הישן.';return}
       const button=$('createLinkBtn');button.disabled=true;button.textContent=tr('מעלה את המסמך...','Uploading document...');$('uploadCard').classList.add('loading');
       let request=null;const uploadFile=selectedUpload;$('uploadError').textContent='';
       try{
