@@ -1,5 +1,5 @@
-const CACHE_VERSION='sign-pdf-shell-v13';
-const APP_SHELL=['./','./index.html','./events.js','./account-auth.js','./gmail-mail.js','./pdf-transfer.js','./events.css','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
+const CACHE_VERSION='sign-pdf-shell-v14';
+const APP_SHELL=['./','./index.html','./events.js','./account-auth.js','./gmail-mail.js','./pdf-transfer.js','./events.css','./workspace-design.css','./attachments.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_VERSION).then(cache=>cache.addAll(APP_SHELL.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting()));
