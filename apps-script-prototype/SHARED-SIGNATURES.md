@@ -2,7 +2,9 @@
 
 ## Release state
 
-This change is a **draft** until the live Apps Script service has been updated and the cloud checks below pass. Local tests exercise real PDF-LIB rendering with simulated Drive, Sheets, ScriptLock and Cache services. They do not verify Apps Script's execution lifecycle or Google's actual locking and response serialization.
+The engine has passed cloud verification in the existing Google Apps Script project on 2026-11-05. Local tests also exercise real PDF-LIB rendering with simulated Google services. The live Web App and frontend release must be confirmed separately before describing a release as available.
+
+Cloud verification created synthetic, non-binding PDFs only. Two submissions launched in separate editor tabs overlapped in execution and produced revision 2 with both signer jobs done. A race discovered during this check was fixed by avoiding a pre-lock Sheet read in the signing RPC and flushing Sheet publication before releasing the lock. Replaying an identical submission left the PDF unchanged; a different second submission was rejected. Further cloud checks verified one row after creation retry, all four page rotations, unchanged original bytes, public summaries without emails/tokens, overlap rejection, malformed input rejection, expired links and cancellation. Temporary owner-bypass QA functions were removed before deployment.
 
 The existing production self-signing and individual-recipient flows are preserved. New shared PDFs, signer labels, signature images, revision records and the latest PDF are stored only in the configured private Google Drive installation. Supabase continues to provide the existing Google account identity and contact-group reads; no new shared-document data or PDFs are stored in Supabase.
 
@@ -16,7 +18,7 @@ The configured installation currently belongs to its existing Sheet owner. The s
 - Links expire after 30 days. The owner can cancel a request without deleting accepted signatures. Only the owner can download a cancelled document.
 - PNG signatures are bounded to 128 KiB and 2 million pixels. Owner name labels are bounded to 64 KiB. Original PDFs are limited to 5 MiB; completed PDFs to 20 MiB; groups to 2-50 signers.
 - Recipients submit PNG bytes, normalized position and an idempotency UUID. They cannot upload a replacement PDF or change a prior signer. The server reconstructs the canonical PDF from the original and all accepted deltas.
-- ScriptLock serializes read/render/commit. A signature submitted against an older display is merged with the latest accepted state. Overlapping positions are rejected, and the UI refreshes the PDF while retaining the user's pending signature for repositioning.
+- ScriptLock serializes read/render/commit. Signing performs no Sheet lookup before acquiring the lock, and publication calls `SpreadsheetApp.flush()` before releasing it. A signature submitted against an older display is merged with the latest accepted state. Overlapping positions are rejected, and the UI refreshes the PDF while retaining the user's pending signature for repositioning.
 - Accepted revisions are immutable. Repeating an identical submission returns the committed result without another signature. A differing second signature from the same token is rejected.
 - Ambiguous ledger writes are reconciled by reading the committed manifest pointer. Files are retained on unknown commit outcomes rather than risking deletion of a published revision.
 - Downloaded versions are snapshots. Personal links always read the current server version until cancellation/expiry.
