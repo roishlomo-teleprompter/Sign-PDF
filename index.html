@@ -170,6 +170,7 @@
         await getDeviceSession();
         const {data,error}=await db.rpc('claim_sign_request',{p_token:signingToken});
         if(error||!data?.length)throw error||new Error(tr('הקישור אינו תקין','The link is invalid'));
+        if(data[0].status==='signed'){status(tr('המסמך כבר נחתם ונשלח בהצלחה. אין צורך לחתום שוב.','This document has already been signed and sent successfully. No further signature is needed.'));return}
         signingRequest=data[0];
         const download=await db.storage.from(STORAGE_BUCKET).download(signingRequest.original_path);
         if(download.error)throw download.error;
