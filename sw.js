@@ -1,5 +1,5 @@
-const CACHE_VERSION='sign-pdf-shell-v32';
-const APP_SHELL=['./','./index.html','./shared-drive.js','./shared-signatures.js?v=31','./events.js?v=25','./account-auth.js?v=25','./gmail-mail.js','./pdf-transfer.js','./events.css?v=25','./design.css?v=31','./design-ui.js?v=31','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
+const CACHE_VERSION='sign-pdf-shell-v33';
+const APP_SHELL=['./','./index.html','./shared-drive.js','./shared-signatures.js?v=31','./events.js?v=25','./account-auth.js?v=25','./gmail-mail.js','./pdf-transfer.js','./events.css?v=25','./design.css?v=33','./design-ui.js?v=31','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./vendor/supabase.js'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_VERSION).then(cache=>cache.addAll(APP_SHELL.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting()));

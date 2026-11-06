@@ -58,7 +58,7 @@
 .signer-card #status.completed{display:block!important;color:#087b62;font-weight:600;padding:18px;background:#eefaf5;border-radius:14px}
 </style>
   <link rel="stylesheet" href="events.css?v=25">
-  <link rel="stylesheet" href="design.css?v=31">
+  <link rel="stylesheet" href="design.css?v=33">
   <script src="design-ui.js?v=31"></script>
   <script src="shared-drive.js"></script>
   <script src="shared-signatures.js?v=31"></script>
@@ -73,7 +73,7 @@
       <p class="upload-subtitle" data-he="המסמך הבא שלך מתחיל כאן" data-en="Your next document starts here">המסמך הבא שלך מתחיל כאן</p>
       <div class="upload-row"><div class="upload-actions"><button id="selfSignBtn" type="button" disabled data-he="חתימה עצמית" data-en="Sign it myself">חתימה עצמית</button><button class="primary-link" id="createLinkBtn" type="button" disabled data-he="שליחה לחתימה" data-en="Send for signature">שליחה לחתימה</button><button id="createSharedBtn" class="shared-entry hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="6" r="2.5"/><path d="M2 16v-2a6 6 0 0 1 12 0M16 3a2.5 2.5 0 0 1 0 5m2 3a5 5 0 0 1 3 4M3 21h8m2-1 5-5 3 3-5 5h-3Z"/></svg><span data-he="חתימה קבוצתית" data-en="Group signing">חתימה קבוצתית</span></button></div><label class="upload" id="dropZone" role="button" tabindex="0" aria-label="העלאת מסמך / Upload document"><input id="fileInput" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,.png,.jpg,.jpeg"><span class="upload-symbol" aria-hidden="true"></span><strong data-he="העלאת מסמך" data-en="Upload document">העלאת מסמך</strong><span class="upload-success" id="uploadSuccess"><span class="upload-check" aria-hidden="true">✓</span><span data-he="הקובץ הועלה בהצלחה" data-en="File uploaded successfully">הקובץ הועלה בהצלחה</span></span></label><div class="selected-file" id="selectedFile" role="status" aria-live="polite" dir="auto"></div><p class="upload-format" data-he="PDF או תמונה" data-en="PDF or image">PDF או תמונה</p></div><p class="upload-note" data-he="העלאה מהירה, חתימה פשוטה ושיתוף מיידי" data-en="Fast uploads. Simple signatures. Instant sharing.">העלאה מהירה, חתימה פשוטה ושיתוף מיידי</p>
       <div id="uploadError" class="status error" role="alert" aria-live="polite"></div>
-      <div class="link-result hidden" id="linkResult"><div class="result-heading"><span class="result-check" aria-hidden="true">✓</span><strong data-he="מוכן לשליחה לחתימה" data-en="Ready to request a signature">מוכן לשליחה לחתימה</strong></div><input id="signingLink" class="link-url" type="text" readonly tabindex="-1" aria-label="Signing link"><div class="share-options"><button id="whatsappLinkBtn" type="button" class="whatsapp-action" title="WhatsApp"><span class="action-icon"></span><span data-he="וואטסאפ" data-en="WhatsApp">וואטסאפ</span></button><button id="emailLinkBtn" type="button"><span class="action-icon"></span><span data-he="מייל" data-en="Email">מייל</span></button><button id="copyLinkBtn" type="button"><span class="action-icon"></span><span class="action-label" data-he="העתקה" data-en="Copy">העתקה</span></button></div><button id="changeUploadBtn" class="text-action" type="button" data-he="מסמך אחר" data-en="Another document">מסמך אחר</button></div>
+      <div class="link-result hidden" id="linkResult"><div class="result-heading"><span class="result-check" aria-hidden="true">✓</span><strong data-he="מוכן לשליחה לחתימה" data-en="Ready to request a signature">מוכן לשליחה לחתימה</strong></div><input id="signingLink" class="link-url" type="text" readonly tabindex="-1" aria-label="Signing link"><div class="share-options"><button id="whatsappLinkBtn" type="button" class="whatsapp-action" title="WhatsApp"><span class="action-icon"></span><span data-he="וואטסאפ" data-en="WhatsApp">וואטסאפ</span></button><button id="emailLinkBtn" type="button"><span class="action-icon"></span><span data-he="מייל" data-en="Email">מייל</span></button><button id="copyLinkBtn" type="button"><span class="action-icon"></span><span class="action-label" data-he="העתקה" data-en="Copy">העתקה</span></button></div><button id="changeUploadBtn" class="text-action" type="button" data-he="ביטול" data-en="Cancel">ביטול</button></div>
     </section>
     <section class="signer-card hidden" id="signerCard"><div id="selfSignSummary" class="hidden"></div><div class="signer-heading"><h2 id="signerFileTitle" dir="auto"></h2><button id="newBtn" type="button" data-he="החלפת מסמך" data-en="Replace document">החלפת מסמך</button></div>
 
@@ -130,6 +130,7 @@
     const sharedToken=new URLSearchParams(location.search).get('shared');
     let eventFlow=null,eventDashboard=null,accountControls=null,sharedOwner=null,sharedFlow=null;
     const googleCallbackError=window.AccountAuth?.callbackError();
+    let pendingLinkRequestId=null;
     let selectedUpload=null,signingRequest=null,pdfBytes=null,pdfDoc=null,pageNum=1,renderTask=null,renderScale=1.15,baseFitScale=1,viewerMode='fit',signatureData=null,placement=null,drag=null,currentFileName='document.pdf',signingDate='',currentLang='he',ownerId=null,ownerDocs=[];
 
     function status(msg,error=false){statusEl.textContent=msg;statusEl.className='status'+(error?' error':'')}
@@ -221,7 +222,7 @@
     };
     async function chooseFile(file){
       if(file)eventDashboard?.selectTab?.('upload');
-      const version=++selectionVersion;setFlow('choose');$('signerCard').classList.add('hidden');$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';pdfDoc=null;pdfBytes=null;signatureData=null;signingRequest=null;
+      const version=++selectionVersion;pendingLinkRequestId=null;setFlow('choose');$('signerCard').classList.add('hidden');$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';pdfDoc=null;pdfBytes=null;signatureData=null;signingRequest=null;
       selectedUpload=null;$('createSharedBtn').classList.add('hidden');$('selfSignBtn').disabled=true;clearSignedOutput();dropZone.classList.remove('uploaded','file-ready');refreshUploadLabel();$('createLinkBtn').disabled=true;$('linkResult').classList.add('hidden');$('uploadError').textContent='';
       if(!file){$('selectedFile').textContent='';return}
       $('selectedFile').textContent=tr('קורא את הקובץ...','Reading file...');
@@ -245,7 +246,7 @@
         request=created.data[0];
         await PdfTransfer.upload(db,STORAGE_BUCKET,request.original_path,uploadFile);
         const uploadedName=uploadFile.name,url=new URL(location.origin+location.pathname);url.searchParams.set('sign',request.signing_token);$('signingLink').value=url.toString();$('linkResult').classList.remove('hidden');
-        $('selfSignBtn').disabled=true;selectedUpload=null;fileInput.value='';$('selectedFile').textContent=uploadedName;dropZone.classList.add('uploaded');refreshUploadLabel();await loadDocuments();
+        $('selfSignBtn').disabled=true;selectedUpload=null;fileInput.value='';$('selectedFile').textContent=uploadedName;dropZone.classList.add('uploaded');pendingLinkRequestId=request.request_id;refreshUploadLabel();await loadDocuments();
       }catch(error){
         console.error('PDF link creation failed',error);
         if(request?.request_id){try{await db.from('sign_requests').delete().eq('id',request.request_id)}catch(cleanupError){console.error('Request cleanup failed',cleanupError)}}
@@ -254,7 +255,7 @@
     };
     $('emailLinkBtn').onclick=()=>GmailMail.compose({db,ownerId,tr,subject:tr('מסמך לחתימה','Document to sign'),body:tr('שלום, מצורף קישור למסמך לחתימה:','Hello, please sign the document using this link:')+'\n'+$('signingLink').value}).catch(e=>{$('uploadError').textContent=e.message});
     $('whatsappLinkBtn').onclick=()=>{const url=$('signingLink').value;if(url)window.open('https://wa.me/?text='+encodeURIComponent(tr('שלום, מצורף מסמך לחתימה:','Hello, please sign this document:')+'\n'+url),'_blank','noopener')};
-    $('changeUploadBtn').onclick=()=>location.href=location.origin+location.pathname;
+    $('changeUploadBtn').onclick=async()=>{const button=$('changeUploadBtn');if(button.disabled)return;button.disabled=true;button.textContent=tr('מבטל...','Cancelling...');$('uploadError').textContent='';try{if(pendingLinkRequestId){const result=await db.rpc('cancel_sign_request',{p_request_id:pendingLinkRequestId});if(result.error)throw result.error;if(result.data!==true){const check=await db.from('sign_requests').select('status').eq('id',pendingLinkRequestId).maybeSingle();if(check.error)throw check.error;if(check.data?.status!=='cancelled')throw new Error(tr('לא ניתן לבטל את הבקשה. ייתכן שהמסמך כבר נחתם.','Could not cancel the request. The document may already have been signed.'));}}await chooseFile();fileInput.value='';$('signingLink').value='';eventDashboard?.selectTab?.('upload');window.scrollTo?.({top:0,behavior:'instant'});dropZone.focus({preventScroll:true});await loadDocuments()}catch(error){$('uploadError').textContent=tr('הביטול לא הושלם. נסו שוב. ','Cancellation did not complete. Please retry. ')+(error.message||'')}finally{button.disabled=false;button.textContent=tr('ביטול','Cancel')}};
     for(const [id,icon] of [['whatsappLinkBtn','whatsapp'],['emailLinkBtn','mail'],['copyLinkBtn','copy']])$(id).querySelector('.action-icon').innerHTML=SignWayUI.icon(icon);
     $('copyLinkBtn').onclick=async()=>{const input=$('signingLink');try{await navigator.clipboard.writeText(input.value)}catch(e){input.select();document.execCommand('copy')}$('copyLinkBtn').querySelector('.action-label').textContent=tr('הועתק!','Copied!');setTimeout(()=>{const label=$('copyLinkBtn').querySelector('.action-label');if(label)label.textContent=tr('העתקה','Copy')},1600)};
 
