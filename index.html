@@ -111,8 +111,8 @@
   <script src="./vendor/pdf-lib.min.js"></script>
   <script src="./vendor/supabase.js" crossorigin="anonymous"></script>
   <script src="./pdf-transfer.js"></script>
-  <script src="./events.js?v=34"></script>
-  <script src="./account-auth.js?v=25"></script>
+  <script src="./events.js?v=35"></script>
+  <script src="./account-auth.js?v=35"></script>
   <script src="./gmail-mail.js"></script>
   <script>
     async function startApp(){
@@ -172,7 +172,7 @@
     async function initializeEventSigner(){
       $('appContent').classList.remove('hidden');$('uploadCard').classList.add('hidden');$('documentsSection').classList.add('hidden');finishStartup();
       try{await getDeviceSession();if(!window.SignEvents)throw new Error('Event module unavailable');eventFlow=await SignEvents.signer({db,token:eventToken,tr,onOpen:async form=>{signingToken=form.token;await initializeSigner()}});await eventFlow.resume()}
-      catch(error){$('signerCard').classList.remove('hidden');status(tr('לא ניתן לפתוח את האירוע. ייתכן שהקישור פג תוקף או שהאירוע אינו פעיל.','Unable to open the event. The link may have expired or the event is inactive.'),true);console.error(error)}
+      catch(error){$('signerCard').classList.remove('hidden');status(tr('לא ניתן לפתוח את בקשת החתימה. ייתכן שהקישור פג תוקף או שהבקשה אינה פעילה.','Unable to open the signature request. The link may have expired or the request is inactive.'),true);console.error(error)}
     }
     async function initializeSigner(){
       $('appContent').classList.remove('hidden');$('uploadCard').classList.add('hidden');$('documentsSection').classList.add('hidden');updateGreeting();$('newBtn').classList.add('hidden');$('signerCard').classList.remove('hidden');finishStartup();
