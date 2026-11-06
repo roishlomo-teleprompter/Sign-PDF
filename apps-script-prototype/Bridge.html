@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta name="referrer" content="no-referrer"></head><body><script>
+'use strict';
+const channel='<?!= channel ?>',appOrigin='https://roishlomo-teleprompter.github.io';
+const allowed=new Set(['list','upload','download','cancel','delete','shared-version','shared-create','shared-list','shared-download','shared-cancel','shared-public-read','shared-public-sign','shared-public-result']);
+window.addEventListener('message',event=>{
+ const m=event.data;
+ if(event.source!==window.top||event.origin!==appOrigin||!m||m.channel!==channel||m.type!=='signway-drive-request'||!allowed.has(m.action)||typeof m.id!=='string')return;
+ const respond=result=>window.top.postMessage({type:'signway-drive-result',channel,id:m.id,...result},appOrigin);
+ const run=google.script.run.withSuccessHandler(data=>respond({data})).withFailureHandler(e=>respond({error:e.message||'Drive request failed'}));if(m.action.indexOf('shared-public-')===0)run.sharedPublicDispatch(m.action,m.payload);else run.appDispatch(m.accessToken,m.action,m.payload);
+});
+window.top.postMessage({type:'signway-drive-ready',channel},appOrigin);
+</script></body></html>
