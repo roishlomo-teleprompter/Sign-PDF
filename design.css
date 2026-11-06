@@ -106,3 +106,70 @@ body:not([data-screen=upload]) #sharedOwnerPanel{display:none!important}
 .shared-recipient.shared-signer-complete .signature-layer,.shared-recipient.shared-signer-complete .viewer-confirm-bar{display:none!important}
 .shared-recipient .signature-layer.fixed{flex-direction:column;gap:1px;padding:3px}.shared-recipient .signature-layer.fixed img{flex:none;width:100%;height:68%}.shared-recipient .signature-layer.fixed .signature-date{direction:rtl;font-size:10px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .shared-cancel{color:#b95768}
+/* The upload task fits between the account header and the bottom navigation. */
+.upload-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.upload-actions:has(.shared-entry:not(.hidden)){grid-template-columns:repeat(3,minmax(0,1fr))}
+.upload-actions .shared-entry{margin:0;border-color:#dce6fb;background:#f0f5ff;color:#2455f5}
+.upload-actions button,.upload-actions #selfSignBtn{min-width:0;padding:12px 5px;line-height:1.3;font-size:14px;white-space:normal}
+.upload-actions button svg{width:29px;height:29px;color:#2455f5}
+.upload-card.loading{opacity:1}
+.upload[aria-busy=true]{cursor:progress;pointer-events:none}
+.upload[aria-busy=true]::after{content:'';position:absolute;inset:-12px;border:4px solid #10a67424;border-top-color:#07976b;border-inline-end-color:#6edaba;border-radius:50%;animation:upload-wait 1s linear infinite}
+.upload[aria-busy=true] .upload-symbol svg{animation:upload-wait 1.3s linear infinite}
+@keyframes upload-wait{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.upload[aria-busy=true]::after,.upload[aria-busy=true] .upload-symbol svg{animation-duration:3s}}
+body[data-flow=link] .link-result{margin-top:20px}
+body[data-screen=upload]:not(.recipient-mode):not(.login-mode) .upload-note{display:none}
+@media(max-width:700px){
+ body[data-screen=upload]:not(.recipient-mode):not(.login-mode) .app-shell{padding-bottom:86px}
+ body[data-screen=upload] .topbar{height:64px;margin-bottom:10px}
+ body[data-screen=upload] .intro{margin:8px 0 0}
+ body[data-screen=upload] .intro h1{font-size:clamp(20px,5.6vw,25px);line-height:1.25;margin:0}
+ body[data-screen=upload] .upload-subtitle{font-size:14px;line-height:1.4;margin:7px 0 32px}
+ body[data-screen=upload] .upload-row .upload{width:clamp(112px,calc(100svh - 520px),196px);height:clamp(112px,calc(100svh - 520px),196px);padding:14px 10px;gap:9px;box-shadow:0 0 0 12px var(--upload-rim),0 0 0 25px var(--upload-halo),0 12px 24px var(--upload-shadow)}
+ body[data-screen=upload] .upload-row .upload strong{font-size:clamp(14px,3.9vw,19px);line-height:1.35;max-width:155px}
+ body[data-screen=upload] .upload-row .upload .upload-symbol svg{width:clamp(35px,7svh,56px);height:clamp(35px,7svh,56px)}
+ body[data-screen=upload] .upload-row>.selected-file{margin:30px 0 0;font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ body[data-screen=upload] .upload-row>.selected-file:empty{display:none}
+ body[data-screen=upload] .upload-format{margin:30px 0 0;font-size:13px}
+ body[data-screen=upload] .upload-actions{margin-top:16px;gap:9px}
+ body[data-screen=upload] .upload-actions button,body[data-screen=upload] .upload-actions #selfSignBtn{height:78px;min-height:78px;border-radius:16px;font-size:12px;gap:7px;padding:9px 4px}
+ body[data-screen=upload] .upload-actions button svg{width:27px;height:27px}
+ body[data-screen=upload][data-flow=link] .upload-row .upload{width:112px;height:112px;margin:0}
+ body[data-screen=upload][data-flow=link] .upload-row .upload strong{font-size:13px}
+ body[data-screen=upload][data-flow=link] .link-result{padding:16px 13px;margin-top:15px;border-radius:20px}
+ body[data-screen=upload][data-flow=link] .result-heading{margin-bottom:12px}
+ body[data-screen=upload][data-flow=link] .result-heading strong{font-size:17px}
+ body[data-screen=upload][data-flow=link] .share-options{gap:9px}
+ body[data-screen=upload][data-flow=link] .share-options button{min-height:72px;padding:10px 4px;font-size:13px}
+ body[data-screen=upload][data-flow=link] .text-action{margin-top:10px}
+}
+@media(max-width:700px) and (max-height:620px){
+ body[data-screen=upload] .topbar{height:55px;margin-bottom:4px}
+ body[data-screen=upload] .upload-subtitle{margin-bottom:25px}
+ body[data-screen=upload] .upload-row>.selected-file,body[data-screen=upload] .upload-format{margin-top:26px}
+ body[data-screen=upload] .upload-actions{margin-top:10px}
+ body[data-screen=upload] .upload-actions button,body[data-screen=upload] .upload-actions #selfSignBtn{height:68px;min-height:68px}
+ body[data-screen=upload][data-flow=link] .intro{display:none}
+}
+/* One compact dialog, with the actions always reachable above the keyboard. */
+.shared-editor{width:min(480px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;overflow:auto;border:1px solid #e1e7f2;background:#fff;box-shadow:0 24px 80px #14254b40}
+.shared-editor::backdrop{background:#111d3e70;backdrop-filter:blur(5px)}
+.shared-editor form{padding:20px;display:flex;flex-direction:column;gap:10px}
+.shared-editor-heading{display:flex;align-items:center;gap:10px}
+.shared-editor-icon{display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;border-radius:14px;color:#2455f5;background:#edf3ff}
+.shared-editor-icon svg{width:27px;height:27px}
+.shared-editor h2{font-size:21px;line-height:1.25;margin:0}
+.shared-editor .shared-caption{font-weight:400;font-size:12px;line-height:1.5;margin:0;color:#717e97}
+.shared-editor .ev-field{margin:0;font-size:13px;line-height:1.35}
+.shared-editor input,.shared-editor select,.shared-editor textarea{margin-top:5px;padding:10px 12px;border:1px solid #dce4f1;border-radius:12px;font-size:14px;min-height:43px;color:#18284a;background:#fafcff}
+.shared-editor textarea{height:clamp(68px,17dvh,120px);min-height:68px;resize:none;line-height:1.6;unicode-bidi:plaintext}
+.shared-editor input:focus,.shared-editor select:focus,.shared-editor textarea:focus{outline:2px solid #96b4ff;outline-offset:1px;border-color:#6f98ff}
+.shared-editor .modal-actions{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:9px;margin:2px 0 0;flex-wrap:nowrap}
+.shared-editor .modal-actions button{min-width:0;min-height:45px;line-height:1.2;font-size:14px;padding:10px 6px;border-radius:13px;white-space:nowrap}
+.shared-editor .modal-actions .primary{background:#2455f5;color:#fff}
+.shared-editor [data-editor-cancel]{background:#f0f3f8;color:#65748d}
+@media(max-height:620px){.shared-editor form{padding:14px;gap:7px}.shared-editor h2{font-size:19px}.shared-editor-heading{gap:8px}.shared-editor-icon{width:35px;height:35px}.shared-editor input,.shared-editor select{min-height:39px;padding:8px 10px}.shared-editor .shared-caption{font-size:11px}}
+.upload-actions #selfSignBtn{order:0}.upload-actions #createLinkBtn{order:1}.upload-actions #createSharedBtn{order:2}
+body:has(.shared-editor[open]){overflow:hidden}
+@media(max-width:700px){body[data-screen=upload][data-flow=link] .upload-card.loading .upload-row .upload{width:clamp(112px,calc(100svh - 520px),196px);height:clamp(112px,calc(100svh - 520px),196px)}body[data-screen=upload][data-flow=link] .upload-card.loading .upload-row .upload strong{font-size:clamp(14px,3.9vw,19px)}}
