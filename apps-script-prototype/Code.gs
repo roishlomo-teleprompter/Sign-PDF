@@ -63,6 +63,7 @@ function appOwner_(accessToken){
  return user.id;
 }
 function appDispatch(accessToken,action,payload){
+ if(action.indexOf('migration-')===0)return migrationDispatch(accessToken,action,payload);
  if(action.indexOf('shared-')===0)return sharedOwnerDispatch(accessToken,action,payload);
  appOwner_(accessToken);payload=payload||{};
  if(action==='list')return requestSheet_().getDataRange().getValues().slice(1).filter(r=>r[0]&&r[7]!=='deleted').map(r=>({id:r[0],title:r[2],original_path:r[3],signed_path:r[4],created_at:r[5],expires_at:r[6],status:r[7],signed_at:r[8],backend:'drive'}));
