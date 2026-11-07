@@ -31,3 +31,11 @@ test('shared-document indexes and PDFs remain private to their owner and shared 
  const png=Buffer.alloc(33);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.writeUInt32BE(100,16);png.writeUInt32BE(40,20);const label=png.toString('base64');
  const shared=b.call('101','shared-create',{creationId:crypto.randomUUID(),title:'Shared.pdf',base64:pdf,people:[{name:'One',email:'one@example.com',label},{name:'Two',email:'two@example.com',label}]});assert.equal(b.call('202','shared-list').length,0);assert.throws(()=>b.call('202','shared-download',{id:shared.id}));const view=b.ctx.googleDispatch(null,'shared-public-read',{token:shared.people[0].token});assert.equal(view.total,2);assert.equal(view.base64,pdf);assert(!JSON.stringify(view).includes('two@example.com'));b.call('101','shared-cancel',{id:shared.id});assert.throws(()=>b.ctx.googleDispatch(null,'shared-public-read',{token:shared.people[0].token}),/פג|בוטל/);
 });
+
+test('Drive diagnostics distinguish disabled API, storage quota and missing consent without exposing Google response details',()=>{
+ const b=fixture();b.ctx.setContext_('101');
+ for(const [reason,message] of [['SERVICE_DISABLED','API is disabled'],['accessNotConfigured','API is disabled'],['storageQuotaExceeded','storage is full'],['ACCESS_TOKEN_SCOPE_INSUFFICIENT','permission is missing'],['unknown','operation failed']]){
+  b.ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>403,getContentText:()=>JSON.stringify({error:{message:'PRIVATE provider response',details:[{reason}]}})});
+  assert.throws(()=>b.ctx.personalRequest_('drive/v3/files'),error=>error.message.includes(message)&&!error.message.includes('PRIVATE'));
+ }
+});
