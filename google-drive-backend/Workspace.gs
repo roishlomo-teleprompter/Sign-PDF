@@ -1,5 +1,5 @@
 /* Domain validation and signing rules. Storage and identity are Google-only. */
-function workspaceTokenValid_(token){return typeof token==='string'&&/^[a-f0-9]{64}$/.test(token)}
+function workspaceTokenValid_(token){return typeof token==='string'&&/^(?:[a-f0-9]{64}|[a-f0-9-]{72})$/.test(token)}
 function workspaceResolve_(w,token){
  if(!workspaceTokenValid_(token))return null;
  const r=w.tables.sign_requests.find(r=>r.token_hash===hash_(token));if(r)return {request:r};

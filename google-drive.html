@@ -117,6 +117,7 @@
   
   <script src="./events.js?v=36"></script>
   <script src="./google-account.js"></script>
+  <script src="./google-migration.js"></script>
   <script src="./gmail-mail.js"></script>
   <script>
     async function startApp(){
@@ -205,6 +206,7 @@
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
       if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr})}
+      window.GoogleMigration?.mount({db,tr});
       if(window.SharedSignatures&&window.SharedDrive?.enabled(user)){sharedOwner=SharedSignatures.owner({db,ownerId,tr,saveBlob,selected:()=>selectedUpload,onAvailable:ready=>$('createSharedBtn').classList.toggle('hidden',!ready||!selectedUpload),showFlow:flow=>{if(flow==='shared')eventDashboard?.selectTab?.('upload');setFlow(flow)},confirmCancel:()=>askConfirm(tr('ביטול בקשת החתימות','Cancel signature request'),tr('הקישורים יפסיקו לפעול. החתימות שכבר נשמרו יישארו במסמך.','Personal links will stop working. Existing signatures remain in the document.'),tr('ביטול הבקשה','Cancel request')),mail:options=>GmailMail.compose({db,ownerId,tr,...options})});$('createSharedBtn').onclick=()=>sharedOwner.openEditor();sharedOwner.refresh()}
     }
 

@@ -8,7 +8,8 @@ function randomToken_(){return (Utilities.getUuid()+Utilities.getUuid()+Utilitie
 function props_(){return PropertiesService.getScriptProperties()}
 function readProp_(key){var v=props_().getProperty(key);return v?JSON.parse(v):null}
 function writeProp_(key,value){props_().setProperty(key,JSON.stringify(value))}
-function locked_(fn){var lock=LockService.getScriptLock();lock.waitLock(30000);try{return fn()}finally{lock.releaseLock()}}
+function personalRefreshContext_(){if(personalContext_&&personalContext_.account){var latest=readProp_('account:'+personalContext_.account.id);if(!latest)throw new Error('Account unavailable');personalContext_.account=latest;personalContext_.workspace=null}}
+function locked_(fn){var lock=LockService.getScriptLock();lock.waitLock(30000);try{personalRefreshContext_();return fn()}finally{lock.releaseLock()}}
 function googleConfig_(){var p=props_(),clientId=p.getProperty('GOOGLE_CLIENT_ID'),clientSecret=p.getProperty('GOOGLE_CLIENT_SECRET'),origin=p.getProperty('APP_ORIGIN');if(!clientId||!clientSecret||!/^https:\/\/[^/]+$/.test(origin||''))throw new Error('Google service is not configured');return {clientId:clientId,clientSecret:clientSecret,origin:origin,redirect:ScriptApp.getService().getUrl()}}
 function doGet(e){
  var p=e&&e.parameter||{};
@@ -83,6 +84,7 @@ function googleDispatch(session,action,p){
  var s=googleSession_(session,false);setContext_(s.id);
  if(action==='auth-session')return locked_(function(){personalBootstrap_();return {access_token:session,user:publicUser_(personalContext_.account)}});
  if(action==='auth-gmail-token'){var a=personalContext_.account;if(!a.scopes.includes('https://www.googleapis.com/auth/gmail.send'))throw new Error('CONNECT');return {token:googleAccess_(a)}}
+ if(action.indexOf('import-')===0)return importDispatch_(action,p);
  if(action.indexOf('shared-')===0)return sharedOwnerDispatch(session,action,p);
  return locked_(function(){var w=workspaceLoad_();if(action==='workspace-status')return {active:true,version:2};if(action!=='workspace-owner-call')throw new Error('Unsupported operation');return personalOwner_(w,p)});
 }

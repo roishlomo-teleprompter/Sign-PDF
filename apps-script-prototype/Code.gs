@@ -17,12 +17,12 @@ function showAdmin_(){
  const t=HtmlService.createTemplateFromFile('Admin');t.adminToken=token;
  SpreadsheetApp.getUi().showSidebar(t.evaluate().setTitle('SignWay - העלאת PDF'));
 }
-function doGet(e){if(e&&e.parameter.mode==='bridge'){const channel=String(e.parameter.channel||'');if(!/^[a-f0-9]{32}$/.test(channel))throw new Error('Invalid channel');const t=HtmlService.createTemplateFromFile('Bridge');t.channel=channel;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).setTitle('SignWay Drive connection')}return HtmlService.createHtmlOutputFromFile('Signer').setTitle('SignWay - חתימה בדרך').addMetaTag('viewport','width=device-width,initial-scale=1')}
+function doGet(e){if(e&&e.parameter.mode==='bridge'){const channel=String(e.parameter.channel||'');if(!/^[a-f0-9]{32}$/.test(channel))throw new Error('Invalid channel');const t=HtmlService.createTemplateFromFile('Bridge');t.channel=channel;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).setTitle('SignWay Drive connection')}if(typeof legacyMigrationFrozen_==='function'&&legacyMigrationFrozen_())return legacyMigrationLanding_();return HtmlService.createHtmlOutputFromFile('Signer').setTitle('SignWay - חתימה בדרך').addMetaTag('viewport','width=device-width,initial-scale=1')}
 function ownerUpload(adminToken,name,base64){
  admin_(adminToken);const url=ScriptApp.getService().getUrl();if(!url||!/\/exec$/.test(url))throw new Error('יש לפרסם תחילה גרסת Web app.');
  const bytes=pdfBytes_(base64),title=String(name||'document.pdf').replace(/[\x00-\x1f]/g,'').slice(0,180),id=Utilities.getUuid(),token=Utilities.getUuid()+Utilities.getUuid();
  const lock=LockService.getScriptLock();lock.waitLock(30000);let file;
- try{file=DriveApp.getFolderById(config_().ORIGINALS_ID).createFile(Utilities.newBlob(bytes,'application/pdf',title));
+ try{if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();file=DriveApp.getFolderById(config_().ORIGINALS_ID).createFile(Utilities.newBlob(bytes,'application/pdf',title));
  const created=new Date(),expiry=new Date(created.getTime()+7*86400000);requestSheet_().appendRow([id,hash_(token),(/^[=+@-]/.test(title)?"'"+title:title),file.getId(),'',created.toISOString(),expiry.toISOString(),'pending','','']);
  return {url:url+'#token='+encodeURIComponent(token),title,expiresAt:expiry.toISOString()};
  }catch(e){if(file)file.setTrashed(true);throw new Error('לא ניתן לשמור את המסמך. בדקו את ההרשאות והמקום הפנוי.')}finally{lock.releaseLock()}
@@ -34,7 +34,7 @@ function getSigningDocument(token){
 }
 function submitSignedDocument(token,base64){
  const bytes=pdfBytes_(base64),digest=hashBytes_(bytes),lock=LockService.getScriptLock();lock.waitLock(30000);let file;
- try{const r=findRequest_(token);
+ try{if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();const r=findRequest_(token);
  if(r.values[7]==='signed'){if(r.values[9]===digest)return {completed:true};throw new Error('המסמך כבר נחתם.');}
  pending_(r);file=DriveApp.getFolderById(config_().SIGNED_ID).createFile(Utilities.newBlob(bytes,'application/pdf',String(r.values[2]).replace(/\.pdf$/i,'')+'-signed.pdf'));
  // One range write commits file identity, status and digest together.
@@ -42,7 +42,7 @@ function submitSignedDocument(token,base64){
  requestSheet_().getRange(r.row,1,1,HEADERS_.length).setValues([row]);return {completed:true};
  }catch(e){if(file)file.setTrashed(true);throw e}finally{lock.releaseLock()}
 }
-function cancelRequest(adminToken,id){admin_(adminToken);const lock=LockService.getScriptLock();lock.waitLock(30000);try{const s=requestSheet_(),rows=s.getDataRange().getValues();for(let i=1;i<rows.length;i++)if(rows[i][0]===id&&rows[i][7]==='pending'){s.getRange(i+1,8).setValue('cancelled');return true}return false}finally{lock.releaseLock()}}
+function cancelRequest(adminToken,id){admin_(adminToken);const lock=LockService.getScriptLock();lock.waitLock(30000);try{if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();const s=requestSheet_(),rows=s.getDataRange().getValues();for(let i=1;i<rows.length;i++)if(rows[i][0]===id&&rows[i][7]==='pending'){s.getRange(i+1,8).setValue('cancelled');return true}return false}finally{lock.releaseLock()}}
 function config_(){const c=PropertiesService.getScriptProperties().getProperties();if(!c.SHEET_ID||!c.ORIGINALS_ID||!c.SIGNED_ID)throw new Error('הפיילוט עדיין לא הוגדר.');return c}
 function requestSheet_(){const c=PropertiesService.getScriptProperties().getProperties();if(!c.SHEET_ID)throw new Error('Run setup first');const ss=SpreadsheetApp.openById(c.SHEET_ID);return ss.getSheetByName('Requests')||ss.insertSheet('Requests')}
 function admin_(token){if(typeof token!=='string'||!CacheService.getScriptCache().get('admin:'+hash_(token)))throw new Error('פתחו מחדש את סרגל SignWay מתוך הגיליון הפרטי.')}
@@ -71,8 +71,9 @@ function appDispatch(accessToken,action,payload){
  if(action==='upload'){const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+hash_(token),'1',60);return ownerUpload(token,payload.name,payload.base64)}
  if(!['download','cancel','delete'].includes(action))throw new Error('פעולה לא נתמכת.');
  const lock=LockService.getScriptLock();lock.waitLock(30000);
- try{const s=requestSheet_(),rows=s.getDataRange().getValues();let row=-1;for(let i=1;i<rows.length;i++)if(rows[i][0]===payload.id&&rows[i][7]!=='deleted'){row=i;break}if(row<0)throw new Error('המסמך לא נמצא.');const r=rows[row];
+ try{if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();const s=requestSheet_(),rows=s.getDataRange().getValues();let row=-1;for(let i=1;i<rows.length;i++)if(rows[i][0]===payload.id&&rows[i][7]!=='deleted'){row=i;break}if(row<0)throw new Error('המסמך לא נמצא.');const r=rows[row];
  if(action==='download'){if(r[7]!=='signed'||!r[4])throw new Error('המסמך עדיין לא נחתם.');const f=DriveApp.getFileById(r[4]);if(f.getSize()>LIMIT_BYTES_)throw new Error('הקובץ גדול מדי.');return {base64:Utilities.base64Encode(f.getBlob().getBytes())}}
+ if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();
  if(action==='cancel'){if(r[7]==='pending')s.getRange(row+1,8).setValue('cancelled');return true}
  // Recoverable trash, not permanent deletion. No arbitrary client-supplied file IDs.
  for(const id of [r[3],r[4]].filter(Boolean))DriveApp.getFileById(id).setTrashed(true);
