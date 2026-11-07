@@ -39,3 +39,11 @@ test('lock acquisition refreshes an account pointer so an earlier read cannot ov
  b.query('101','signature_groups','insert',{name:'Created by the previous writer',members:[]});
  b.ctx.personalContext_=stale;const rows=b.ctx.locked_(()=>b.ctx.workspaceLoad_().tables.signature_groups);assert.equal(rows.length,1);assert.equal(rows[0].name,'Created by the previous writer');
 });
+
+test('historic shared identities map to the installed Google owner only when every referenced file is physically owned by that account',()=>{
+ const b=importer();vm.runInContext(fs.readFileSync('apps-script-prototype/GoogleExport.gs','utf8'),b.ctx);
+ const original=b.snapshot.shared[0];original.ownerId='retired-account-id';b.ctx.workspaceLoad_=()=>b.snapshot.workspace;b.ctx.config_=()=>({SHEET_ID:'sheet'});b.ctx.sharedFind_=()=>({meta:original});
+ b.ctx.SpreadsheetApp={openById:()=>({getSheetByName:name=>name==='SharedDocuments'?{getDataRange:()=>({getValues:()=>[['id'],[original.id]]})}:null})};
+ let owner='101@example.com';b.ctx.DriveApp={getFileById:id=>({getOwner:()=>({getEmail:()=>owner}),getMimeType:()=>['label','stamp'].includes(id)?'image/png':'application/pdf',getName:()=>id,getSize:()=>b.sourceFiles[id].length,getBlob:()=>({getBytes:()=>Array.from(b.sourceFiles[id])})})};
+ const source=b.ctx.legacyGoogleSnapshot_('101@example.com');assert.equal(source.snapshot.shared[0].ownerId,'old-owner');assert.equal(original.ownerId,'retired-account-id');owner='202@example.com';assert.throws(()=>b.ctx.legacyGoogleSnapshot_('101@example.com'),/another Google account/);
+});
