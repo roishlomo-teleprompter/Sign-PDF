@@ -4,7 +4,14 @@ function personalRequest_(path,options){
  var a=personalContext_.account,o=Object.assign({muteHttpExceptions:true,followRedirects:false},options||{});o.headers=Object.assign({},o.headers||{},{Authorization:'Bearer '+googleAccess_(a)});
  var r=UrlFetchApp.fetch('https://www.googleapis.com/'+path,o),status=r.getResponseCode();
  if(status===401){CacheService.getScriptCache().remove('google-token:'+a.id);throw new Error('Google access expired. Reconnect your account.')}
- if(status<200||status>=300)throw new Error('Google Drive operation failed ('+status+'). Check access and available space.');return r;
+ if(status<200||status>=300){
+  var details={};try{details=JSON.parse(r.getContentText()).error||{}}catch(_){}
+  var reasons=(details.errors||[]).map(e=>e.reason).concat((details.details||[]).map(e=>e.reason));
+  if(reasons.some(v=>['SERVICE_DISABLED','accessNotConfigured'].includes(v)))throw new Error('Google Drive API is disabled in the Google OAuth project ('+status+'). Enable Google Drive API in Google Cloud.');
+  if(reasons.includes('storageQuotaExceeded'))throw new Error('Google Drive storage is full ('+status+'). Free space or increase storage.');
+  if(reasons.some(v=>['insufficientPermissions','ACCESS_TOKEN_SCOPE_INSUFFICIENT'].includes(v)))throw new Error('Google Drive permission is missing ('+status+'). Reconnect and approve Drive access.');
+  throw new Error('Google Drive operation failed ('+status+'). Check access and available space.');
+ }return r;
 }
 function personalJson_(path,method,value){var options={method:method||'get'};if(value!==undefined){options.contentType='application/json';options.payload=JSON.stringify(value)}return JSON.parse(personalRequest_(path,options).getContentText()||'{}')}
 function personalDrive_(){
