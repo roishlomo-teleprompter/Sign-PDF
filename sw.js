@@ -14,6 +14,7 @@ self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
   // Private API and storage requests must never enter the app shell cache.
   if(url.origin!==self.location.origin||!url.href.startsWith(self.registration.scope))return;
+  if(url.pathname.endsWith('/google-drive.html')||/\/google-(?:drive-config|drive-client|workspace|account)\.js$/.test(url.pathname))return;
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE_VERSION);
     if(event.request.mode==='navigate'){
