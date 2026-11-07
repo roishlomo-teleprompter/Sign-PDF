@@ -1,6 +1,10 @@
 # Personal Google Drive replacement
 
-Status: implementation prepared for a **separate deployment**, not activated in production.
+Status: the separate Google-only service is deployed and configured. Google sign-in
+and creation of the personal Drive workspace were verified for the installation
+owner. The owner remains a Google OAuth test user until Branding and publication
+are completed. The new import path is implemented; final live transfer and the
+main-entrypoint switch must be verified before declaring the replacement complete.
 The production `index.html` and existing installation are unchanged. Do not shut down
 or delete the existing backend: data migration and live verification remain incomplete.
 
@@ -62,18 +66,37 @@ have been created by the old Apps Script application. The new `drive.file` scope
 not automatically grant access to old files simply because they belong to the same
 person. Do not broaden to full-Drive scope to bypass this issue silently.
 
-An explicit migration/import step must copy user-approved original/signed bytes and
-records into the new app's Drive files, remap the owning identity, retain original
-request IDs, link capability hashes and participant tokens, and deliberately migrate
-or re-establish old recipient session bindings. The current new project does **not**
-implement that import. Historical links still target the old entrypoint and old
-backend, so a compatible link router and verified transfer must precede disabling it.
+The optional owner-account transfer is implemented in `GoogleExport.gs` on the
+existing installation and `Import.gs` on the new installation. The new service
+passes its own short-lived Google access token to the fixed source installation;
+the source verifies the Google email against its private Sheet owner. No previous
+identity-provider endpoint, credential or session is used for this export.
 
-For every account, verify counts, byte hashes, groups, settings, drafts, responses,
-old and new public links and signed-document preview/download before making the new
-entrypoint the default. Freeze writes during the final transfer and reconcile
-concurrent signatures. Retain the original data until verification succeeds. This
-change does not delete any existing project, user, object, file or table.
+The source snapshots its active tables, settings, individual pilot requests and
+shared-document metadata. Every original/signed PDF and referenced signature PNG
+is hashed. The new service copies and verifies files in resumable private stages,
+then verifies destination bytes in bounded batches. Final activation requires an
+unchanged source snapshot and freezes source writes under the existing source
+lock. Original records and files are retained. A manifest marker reconciles a
+lost final response. Writes refresh the latest account pointer after taking the
+lock so an earlier request cannot overwrite the imported workspace.
+
+Owner IDs are mapped to the Google subject; request IDs, capability hashes,
+participant tokens, original storage paths and shared personal links survive.
+Retired recipient session claims are cleared and must be claimed through the new
+Google-only guest-session service using the same private link. The legacy pilot
+landing page offers its existing personal token through the new main entrypoint.
+
+The transfer deliberately requires an empty destination and refuses cross-account
+sources, link collisions, missing file mappings, corrupted bytes and changed source
+data. It currently covers the configured installation owner. Other accounts start
+with personal Drive storage; their previous-provider history, if any, requires a
+separately authorized export. Never claim those histories were copied by this tool.
+
+After a verified transfer, replace the main entrypoint and worker cache with the
+Google-only shell, and validate old/new public links, signed preview/download and
+contacts. The source freeze must stay enabled after new Drive writes. A rollback
+requires reconciling those new writes first; do not simply remove the freeze flag.
 
 ## Live acceptance checks
 

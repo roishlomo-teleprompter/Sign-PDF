@@ -2,6 +2,7 @@
  * back to source writes after activation. Immutable manifests publish atomically. */
 function workspaceLoad_(){const id=PropertiesService.getScriptProperties().getProperty('WORKSPACE_V1');return id?JSON.parse(DriveApp.getFileById(id).getBlob().getDataAsString()):null}
 function workspaceSave_(w){
+ if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();
  w.revision=(w.revision||0)+1;const text=JSON.stringify(w),folder=DriveApp.getFolderById(w.folderId);
  const f=folder.createFile(Utilities.newBlob(text,'application/json','workspace-'+Utilities.getUuid()+'.json'));
  if(hash_(f.getBlob().getDataAsString())!==hash_(text))throw new Error('Workspace verification failed');
