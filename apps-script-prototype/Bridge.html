@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta name="referrer" content="no-referrer"></head><body><script>
 'use strict';
 const channel='<?!= channel ?>',appOrigin='https://roishlomo-teleprompter.github.io';
-const allowed=new Set(['migration-status','migration-start','migration-step','list','upload','download','cancel','delete','shared-version','shared-create','shared-list','shared-download','shared-cancel','shared-public-read','shared-public-sign','shared-public-result']);
+const allowed=new Set(['workspace-status','workspace-activate','workspace-owner-call','workspace-public-resolve','workspace-public-call','migration-status','migration-start','migration-step','list','upload','download','cancel','delete','shared-version','shared-create','shared-list','shared-download','shared-cancel','shared-public-read','shared-public-sign','shared-public-result']);
 window.addEventListener('message',event=>{
  const m=event.data;
  if(event.source!==window.top||event.origin!==appOrigin||!m||m.channel!==channel||m.type!=='signway-drive-request'||!allowed.has(m.action)||typeof m.id!=='string')return;

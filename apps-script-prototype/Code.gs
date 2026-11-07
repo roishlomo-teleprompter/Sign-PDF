@@ -63,6 +63,7 @@ function appOwner_(accessToken){
  return user.id;
 }
 function appDispatch(accessToken,action,payload){
+ if(action.indexOf('workspace-')===0)return workspaceDispatch(accessToken,action,payload);
  if(action.indexOf('migration-')===0)return migrationDispatch(accessToken,action,payload);
  if(action.indexOf('shared-')===0)return sharedOwnerDispatch(accessToken,action,payload);
  appOwner_(accessToken);payload=payload||{};
