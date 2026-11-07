@@ -1,5 +1,19 @@
 # Live Drive workspace cutover
 
+## Verified release
+
+On 2026-11-07 the existing Apps Script Web App was updated to version 6,
+PR #19 was merged and the configured installation was activated against its
+verified staged copy. Live checks passed for existing signed PDF preview and
+download, a new standalone request with signed completion from an anonymous
+session, self-sign original/signed persistence, group creation/readback,
+signature-request draft/participant persistence and language persistence after
+reopening the app. The owner signed back in after the anonymous test. Source
+workspace record and PDF-object counts stayed unchanged through these writes.
+All 113 local tests pass, including a transferred legacy namespace/claim test.
+Synthetic QA documents, a group and a draft remain clearly labeled for review;
+no email or WhatsApp invitations were sent during verification.
+
 All four existing workspace tables and their PDF paths are served from immutable
 private Drive JSON manifests after activation. The current manifest pointer is
 published through one Script Property under ScriptLock. Existing Auth remains
