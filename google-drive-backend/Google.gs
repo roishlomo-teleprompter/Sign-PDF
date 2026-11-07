@@ -14,9 +14,28 @@ function googleConfig_(){var p=props_(),clientId=p.getProperty('GOOGLE_CLIENT_ID
 function doGet(e){
  var p=e&&e.parameter||{};
  if(p.mode==='bridge'){if(!/^[a-f0-9]{32}$/.test(p.channel||''))throw new Error('Invalid channel');var t=HtmlService.createTemplateFromFile('Bridge');t.channel=p.channel;t.appOrigin=googleConfig_().origin;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)}
- if(p.code||p.error){try{var completion=googleCallback_(p);return HtmlService.createHtmlOutput('<meta name="referrer" content="no-referrer"><p>החיבור ל-Google הושלם.</p><a target="_top" href="'+completion.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">המשך ל-SignWay / Continue to SignWay</a>')}catch(error){return HtmlService.createHtmlOutput('<p>החיבור לא הושלם. חזרו ל-SignWay ונסו שוב.</p>')}}
+ if(p.code||p.error){try{return googleCallbackPage_(googleCallback_(p),null)}catch(error){var issue=googleCallbackIssue_(error);console.warn('SignWay OAuth callback: '+issue.code);return googleCallbackPage_(null,issue)}}
  return HtmlService.createHtmlOutput('<p>SignWay Google service</p>');
 }
+function googleCallbackIssue_(error){
+ var message=String(error&&error.message||''),rules=[
+  [/Invalid state|Authorization expired/,'STATE_EXPIRED','בקשת ההתחברות פגה. חזרו לאפליקציה והתחילו התחברות חדשה.','The sign-in request expired. Return to the app and start again.'],
+  [/authorization was declined/,'ACCESS_DECLINED','ההרשאה לא אושרה ב-Google. ניתן לחזור ולנסות שוב.','Google authorization was declined. Return to the app to try again.'],
+  [/Google authorization expired/,'TOKEN_EXCHANGE_FAILED','לא ניתן היה להשלים את האישור מול Google. יש לבדוק את הגדרות חיבור Google של השירות.','The service could not complete Google authorization. The Google connection settings need checking.'],
+  [/Choose the same Google account/,'ACCOUNT_MISMATCH','לאישור Gmail יש לבחור באותו חשבון שמחובר ב-SignWay.','To authorize Gmail, choose the account already signed in to SignWay.'],
+  [/Approve personal Drive access/,'DRIVE_PERMISSION_MISSING','יש לאשר גישה לקובצי האפליקציה ב-Drive במסך ההרשאות של Google.','Approve access to the app files in Drive on the Google consent screen.'],
+  [/Gmail access was not approved/,'GMAIL_PERMISSION_MISSING','הרשאת שליחת מייל לא אושרה. חזרו לאפליקציה ואשרו שליחה דרך Gmail.','Gmail sending permission was not approved. Return to the app to authorize sending.'],
+  [/Offline Drive access is required/,'OFFLINE_ACCESS_MISSING','Google לא החזירה הרשאה להמשך גישה. יש להתחבר מחדש ולאשר את ההרשאות.','Google did not return offline access. Sign in again and approve the requested permissions.'],
+  [/identity|Google identity/i,'IDENTITY_CHECK_FAILED','לא ניתן היה לאמת את ההתחברות. התחילו שוב מתוך SignWay.','The sign-in identity could not be verified. Start again from SignWay.'],
+  [/not configured/,'SERVICE_CONFIGURATION','חסרה הגדרה בשירות ההתחברות. יש לפנות לתמיכה עם קוד השגיאה.','The sign-in service configuration is incomplete. Contact support with this error code.']
+ ];for(var rule of rules)if(rule[0].test(message))return {code:rule[1],he:rule[2],en:rule[3]};
+ return {code:'CALLBACK_FAILED',he:'לא ניתן היה להשלים את החיבור. פנו לתמיכה עם קוד השגיאה.',en:'The connection could not be completed. Contact support with this error code.'};
+}
+function googleCallbackPage_(completion,issue){
+ var escape=function(value){return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')},url=completion||'https://roishlomo-teleprompter.github.io/Sign-PDF/',heading=issue?'ההתחברות לא הושלמה':'החיבור ל-Google הושלם',copy=issue?'<p>'+issue.he+'</p><p dir="ltr" lang="en">'+issue.en+'</p><p dir="ltr">'+issue.code+'</p>':'<p>לחצו להמשך כדי לחזור לאפליקציה.</p><p dir="ltr" lang="en">Continue to return to SignWay.</p>';
+ return HtmlService.createHtmlOutput('<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>SignWay</title><style>body{margin:0;padding:24px;background:#f2f5ff;color:#17274b;font:18px/1.7 Arial,sans-serif}main{max-width:440px;margin:12vh auto;padding:28px;border-radius:24px;background:white;text-align:center;box-shadow:0 12px 45px #233d7b18}h1{font-size:25px}a{display:block;background:#2455f5;color:white;padding:14px;border-radius:14px;text-decoration:none;font-weight:bold}</style></head><body><main><h1>'+heading+'</h1>'+copy+'<a target="_top" href="'+escape(url)+'">'+(issue?'חזרה ל-SignWay / Return to SignWay':'המשך ל-SignWay / Continue to SignWay')+'</a></main></body></html>');
+}
+
 function googleTokenRequest_(payload){var r=UrlFetchApp.fetch('https://oauth2.googleapis.com/token',{method:'post',payload:payload,muteHttpExceptions:true,followRedirects:false});if(r.getResponseCode()!==200)throw new Error('Google authorization expired. Reconnect your account.');return JSON.parse(r.getContentText())}
 function googleBegin_(p,session){
  if(!p||!/^[a-f0-9]{64}$/.test(p.proofHash||''))throw new Error('Invalid browser proof');
