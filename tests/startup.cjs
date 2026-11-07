@@ -29,7 +29,7 @@ for(const mode of ['guest','owner','anonymous','expired','missing','stalled','re
  }finally{b.dom.window.close()}
 });
 test('signing link failure stays in signer view',async()=>{const b=await boot('rejected','?sign=test-only');try{assert(b.visible('appContent'));assert(b.visible('signerCard'));assert(!b.visible('uploadCard'));assert(!b.visible('documentsSection'));assert(b.w.document.getElementById('status').classList.contains('error'))}finally{b.dom.window.close()}});
-test('language switch after direct entry remains usable',async()=>{const b=await boot('guest');try{b.w.document.getElementById('englishBtn').click();assert.equal(b.w.document.documentElement.lang,'en');assert(!b.visible('appContent'));assert.equal(b.calls.anonymous,0);assert.match(b.w.document.querySelector('.login-gate p').textContent,/Your documents, in your Drive/);b.w.document.getElementById('hebrewBtn').click();assert.equal(b.w.document.documentElement.lang,'he')}finally{b.dom.window.close()}});
+test('language switch after direct entry remains usable',async()=>{const b=await boot('guest');try{b.w.document.getElementById('englishBtn').click();assert.equal(b.w.document.documentElement.lang,'en');assert(!b.visible('appContent'));assert.equal(b.calls.anonymous,0);assert.match(b.w.document.querySelector('.login-gate h1').textContent,/The easy way/);b.w.document.getElementById('hebrewBtn').click();assert.equal(b.w.document.documentElement.lang,'he')}finally{b.dom.window.close()}});
 
 test('overlapping sign-in event and initial session do not remount the same account dashboard',async()=>{const b=await boot('owner','',true);try{assert.equal(b.calls.mounts,1);assert(b.visible('appContent'))}finally{b.dom.window.close()}});
 

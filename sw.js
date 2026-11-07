@@ -1,4 +1,4 @@
-const CACHE_VERSION='sign-pdf-shell-v40-google';
+const CACHE_VERSION='sign-pdf-shell-v41-google';
 const APP_SHELL=['./','./index.html','./document-preview.js?v=37','./google-drive-config.js','./google-drive-client.js','./google-workspace.js','./shared-signatures.js?v=31','./events.js?v=36','./google-account.js','./google-migration.js','./gmail-mail.js','./pdf-transfer.js','./events.css?v=25','./design.css?v=37','./design-ui.js?v=31','./manifest.webmanifest','./icons/signway-logo.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js'];
 const SHELL_URLS=new Set(APP_SHELL.map(path=>new URL(path,self.registration.scope).href));
 const HOME_URL=new URL('./index.html',self.registration.scope).href;
