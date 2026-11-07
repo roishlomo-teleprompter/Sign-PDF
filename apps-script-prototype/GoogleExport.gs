@@ -12,14 +12,14 @@ function legacyGoogleOwner_(token){
 function legacyGoogleSnapshot_(email){
  const original=workspaceLoad_();if(!original)throw new Error('No active Drive workspace');
  const w=JSON.parse(JSON.stringify(original)),shared=[],ss=SpreadsheetApp.openById(config_().SHEET_ID),sharedSheet=ss.getSheetByName('SharedDocuments');
- if(sharedSheet)for(const row of sharedSheet.getDataRange().getValues().slice(1)){if(row[0]){const m=sharedFind_(String(row[0])).meta;if(m.ownerId!==w.ownerId)throw new Error('Shared owner mismatch');shared.push(m)}}
+ if(sharedSheet)for(const row of sharedSheet.getDataRange().getValues().slice(1)){if(row[0]){const m=JSON.parse(JSON.stringify(sharedFind_(String(row[0])).meta));m.ownerId=w.ownerId;shared.push(m)}}
  const requests=ss.getSheetByName('Requests');
  if(requests)for(const r of requests.getDataRange().getValues().slice(1)){
   if(!r[0]||r[7]==='deleted')continue;if(w.tables.sign_requests.some(x=>x.id===r[0]))continue;
   const base='pilot/'+r[0],row={id:String(r[0]),owner_id:w.ownerId,storage_owner_id:w.ownerId,signer_id:null,title:String(r[2]),token_hash:String(r[1]),original_path:base+'/original.pdf',signed_path:base+'/signed.pdf',created_at:String(r[5]),updated_at:String(r[8]||r[5]),expires_at:String(r[6]),status:String(r[7]),signed_at:r[8]?String(r[8]):null};
   w.tables.sign_requests.push(row);for(const pair of [[r[3],row.original_path],[r[4],row.signed_path]])if(pair[0])w.files.push({path:pair[1],fileId:String(pair[0]),sha256:null});
  }
- const byId={};function add(id,role,sha){if(!id)return;if(byId[id]){if(sha&&byId[id].sha256&&sha!==byId[id].sha256)throw new Error('Source digest mismatch');return}const f=DriveApp.getFileById(id),mime=f.getMimeType();if(!['application/pdf','image/png'].includes(mime))throw new Error('Unsupported source file');const actual=hashBytes_(f.getBlob().getBytes());if(sha&&sha!==actual)throw new Error('Source digest mismatch');byId[id]={id,role,name:f.getName(),mime,bytes:f.getSize(),sha256:actual}}
+ const byId={};function add(id,role,sha){if(!id)return;if(byId[id]){if(sha&&byId[id].sha256&&sha!==byId[id].sha256)throw new Error('Source digest mismatch');return}const f=DriveApp.getFileById(id),mime=f.getMimeType();if(f.getOwner().getEmail().toLowerCase()!==email)throw new Error('Source file belongs to another Google account');if(!['application/pdf','image/png'].includes(mime))throw new Error('Unsupported source file');const actual=hashBytes_(f.getBlob().getBytes());if(sha&&sha!==actual)throw new Error('Source digest mismatch');byId[id]={id,role,name:f.getName(),mime,bytes:f.getSize(),sha256:actual}}
  for(const f of w.files)add(f.fileId,f.path.endsWith('/signed.pdf')?'signed':'original',f.sha256);
  for(const m of shared){add(m.originalId,'shared');add(m.pdfId,'shared');for(const p of m.people){add(p.labelId,'shared');add(p.pngId,'shared')}}
  shared.sort((a,b)=>a.id.localeCompare(b.id));const files=Object.values(byId).sort((a,b)=>a.id.localeCompare(b.id));
