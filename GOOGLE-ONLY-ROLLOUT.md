@@ -1,12 +1,15 @@
 # Personal Google Drive replacement
 
-Status: the separate Google-only service is deployed and configured. Google sign-in
-and creation of the personal Drive workspace were verified for the installation
-owner. The owner remains a Google OAuth test user until Branding and publication
-are completed. The new import path is implemented; final live transfer and the
-main-entrypoint switch must be verified before declaring the replacement complete.
-The production `index.html` and existing installation are unchanged. Do not shut down
-or delete the existing backend: data migration and live verification remain incomplete.
+Status: the Google-only service is deployed and configured. The installation owner's
+55 source files were copied and byte-verified, and the existing source was frozen
+before the new manifest became active. Original source data remains retained.
+This change replaces the default entrypoint and worker cache with the Google-only
+shell. It must not load the previous identity SDK or contact its services.
+
+The existing Google OAuth client is still Testing. Complete Branding and Audience
+publication before offering sign-in to users beyond the configured test accounts.
+Live acceptance with a second real Google account remains pending. Do not delete
+the previous backend or original files while that rollout remains incomplete.
 
 ## Implemented
 
@@ -53,8 +56,8 @@ are composed by the server, preserving the existing overlap and retry checks.
    It uses only UrlFetchApp for private user storage, never DriveApp. Add the exact
    new `/exec` URL as an authorized redirect URI on the Web OAuth client.
 4. Put the new `/exec` URL in `google-drive-config.js`. This public file must never
-   contain client secrets, refresh tokens or sessions. It is deliberately blank
-   until an actual deployment exists, so the new page fails closed.
+   contain client secrets, refresh tokens or sessions. It is configured for the deployed service. Invalid or missing configuration
+   makes the new page fail closed.
 5. Open the new entrypoint, connect two different Google accounts, and perform the
    live checks below. Deployments with copied project files but no OAuth setup are
    not operational releases.
@@ -93,9 +96,8 @@ data. It currently covers the configured installation owner. Other accounts star
 with personal Drive storage; their previous-provider history, if any, requires a
 separately authorized export. Never claim those histories were copied by this tool.
 
-After a verified transfer, replace the main entrypoint and worker cache with the
-Google-only shell, and validate old/new public links, signed preview/download and
-contacts. The source freeze must stay enabled after new Drive writes. A rollback
+The default entrypoint and worker cache now use the Google-only shell. Continue
+cloud acceptance of old/new public links, signed preview/download and contacts. The source freeze must stay enabled after new Drive writes. A rollback
 requires reconciling those new writes first; do not simply remove the freeze flag.
 
 ## Live acceptance checks
