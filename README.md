@@ -28,4 +28,4 @@ The production build extracts `tr(he, en)` calls and `data-he` / `data-en` label
 
 All future interface text must use the existing `tr(he, en)` or paired data attributes. Do not translate uploaded documents, names, contacts, typed messages or signing links. Unavailable translations fall back to English. Automated translation needs human review for important wording and does not establish legal validity in any jurisdiction.
 
-Languages: he, en, es, pt-BR, fr, de, ar, hi, id, ja, ko, zh-CN, ru. The service accepts catalog identifiers only, and reads the application's fixed public catalog URL. It does not accept arbitrary translation text or URLs. No new API key or Cloud billing configuration is used. Existing Apps Script quotas apply.
+Languages: he, en, es, pt-BR, fr, de, ar, ja, ko, zh-CN, ru. The service accepts catalog identifiers only, and reads the application's fixed public catalog URL. It does not accept arbitrary translation text or URLs. No new API key or Cloud billing configuration is used. Existing Apps Script quotas apply.

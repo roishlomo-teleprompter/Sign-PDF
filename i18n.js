@@ -1,8 +1,8 @@
 /* Only versioned application UI literals are translated. User text never goes to this service. */
 window.SignWayI18n=(()=>{
- const languages=[['he','עברית','rtl'],['en','English'],['es','Español'],['pt-BR','Português (Brasil)'],['fr','Français'],['de','Deutsch'],['ar','العربية','rtl'],['hi','हिन्दी'],['id','Bahasa Indonesia'],['ja','日本語'],['ko','한국어'],['zh-CN','简体中文'],['ru','Русский']];
+ const languages=[['he','עברית','rtl'],['en','English'],['es','Español'],['pt-BR','Português (Brasil)'],['fr','Français'],['de','Deutsch'],['ar','العربية','rtl'],['ja','日本語'],['ko','한국어'],['zh-CN','简体中文'],['ru','Русский']];
  // Short signing labels need context that machine translation may not infer.
- const terms={es:{Sign:'Firmar'},'pt-BR':{Sign:'Assinar'},fr:{Sign:'Signer'},de:{Sign:'Unterschreiben'},ar:{Sign:'توقيع','Upload document':'رفع مستند'},hi:{Sign:'हस्ताक्षर'},id:{Sign:'Tanda tangan'},ja:{Sign:'署名'},ko:{Sign:'서명'},'zh-CN':{Sign:'签名'},ru:{Sign:'Подписать'}};
+ const terms={es:{Sign:'Firmar'},'pt-BR':{Sign:'Assinar'},fr:{Sign:'Signer'},de:{Sign:'Unterschreiben'},ar:{Sign:'توقيع','Upload document':'رفع مستند'},ja:{Sign:'署名'},ko:{Sign:'서명'},'zh-CN':{Sign:'签名'},ru:{Sign:'Подписать'}};
  let catalog,locale='en',dictionary={},transport,loading,generation=0;
  const supported=lang=>languages.some(x=>x[0]===lang);
  function detect(lang){if(supported(lang))return lang;const base=String(lang||'').split('-')[0];return base==='pt'?'pt-BR':base==='zh'?'zh-CN':supported(base)?base:'en'}

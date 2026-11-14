@@ -242,3 +242,5 @@ html:not([lang="he"]) .hebrew-slogan{display:none}
 .header-tools .lang-switch{position:absolute;top:calc(100% - 8px);inset-inline-end:0;z-index:100;min-width:160px;flex-direction:column;padding:6px;box-shadow:0 8px 24px #14204426}.header-tools .lang-switch button{width:100%;justify-content:center}.profile-button{font-weight:700;font-size:14px}.profile-button img{display:block}
 
 .header-tools .lang-switch{max-height:min(65dvh,480px);overflow-y:auto}.lang-switch button{flex-shrink:0}
+
+.header-tools .language-picker{position:relative;display:inline-flex;align-items:center}.language-picker>#languageToggle{background:transparent;color:#151f48;padding:8px}.header-tools .language-picker .lang-switch{top:calc(100% + 8px);left:0;right:auto;inset-inline-end:auto;min-width:min(190px,calc(100vw - 40px));box-sizing:border-box}
