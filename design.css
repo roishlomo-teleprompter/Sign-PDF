@@ -237,10 +237,14 @@ body[data-screen=upload][data-flow=link] #changeUploadBtn{width:100%;min-height:
 .doc-row[data-state="cancelled"] .badge{background:#000;color:#fff}
 .doc-summary .badge.expired-badge{background:#e5e7eb;color:#4b5563}
 
-.upload-actions #cancelSelectedBtn{background:#fff1f3;color:#b4233d;border:1px solid #f0cbd3;box-shadow:none}
+
 html:not([lang="he"]) .hebrew-slogan{display:none}
 .header-tools .lang-switch{position:absolute;top:calc(100% - 8px);inset-inline-end:0;z-index:100;min-width:160px;flex-direction:column;padding:6px;box-shadow:0 8px 24px #14204426}.header-tools .lang-switch button{width:100%;justify-content:center}.profile-button{font-weight:700;font-size:14px}.profile-button img{display:block}
 
 .header-tools .lang-switch{max-height:min(65dvh,480px);overflow-y:auto}.lang-switch button{flex-shrink:0}
 
 .header-tools .language-picker{position:relative;display:inline-flex;align-items:center}.language-picker>#languageToggle{background:transparent;color:#151f48;padding:8px}.header-tools .language-picker .lang-switch{top:calc(100% + 8px);left:0;right:auto;inset-inline-end:auto;min-width:min(190px,calc(100vw - 40px));box-sizing:border-box}
+
+body[data-screen=upload] .upload-actions:has(#createGroupBtn:not(.hidden)){grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.upload-actions #createGroupBtn{order:2}.upload-actions #createSharedBtn{order:3}.upload-actions #createGroupBtn>span[aria-hidden]{font-size:29px;color:#2455f5;line-height:1}.upload-cancel-hint{font-size:12px;line-height:1.4;font-weight:400;color:#fff;max-width:185px;text-align:center}.upload-hold-ring{display:none;position:absolute;inset:-9px;width:calc(100% + 18px)!important;height:calc(100% + 18px)!important;pointer-events:none;overflow:visible;transform:rotate(-90deg)}.upload-hold-ring circle{fill:none;stroke:#ff7183;stroke-width:3;stroke-dasharray:302;stroke-dashoffset:302}.hold-cancelling .upload-hold-ring{display:block}.hold-cancelling .upload-hold-ring circle{animation:upload-cancel-hold 3s linear forwards}.upload.file-ready{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}@keyframes upload-cancel-hold{to{stroke-dashoffset:0}}
+
+body[data-screen=upload] .upload-actions:has(#createGroupBtn:not(.hidden)) button{height:clamp(82px,12dvh,104px);font-size:12px;line-height:1.25;padding:7px 3px;gap:5px}body[data-screen=upload] .upload-actions:has(#createGroupBtn:not(.hidden)) button svg{width:26px;height:26px}
