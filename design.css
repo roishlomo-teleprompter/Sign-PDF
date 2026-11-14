@@ -239,3 +239,4 @@ body[data-screen=upload][data-flow=link] #changeUploadBtn{width:100%;min-height:
 
 .upload-actions #cancelSelectedBtn{background:#fff1f3;color:#b4233d;border:1px solid #f0cbd3;box-shadow:none}
 html:not([lang="he"]) .hebrew-slogan{display:none}
+.header-tools .lang-switch{position:absolute;top:calc(100% - 8px);inset-inline-end:0;z-index:100;min-width:160px;flex-direction:column;padding:6px;box-shadow:0 8px 24px #14204426}.header-tools .lang-switch button{width:100%;justify-content:center}.profile-button{font-weight:700;font-size:14px}.profile-button img{display:block}
