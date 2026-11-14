@@ -25,6 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - run: npm ci --ignore-scripts
       - name: Prepare Google-only public application
         run: node scripts/build-public.cjs
       - uses: actions/configure-pages@v5

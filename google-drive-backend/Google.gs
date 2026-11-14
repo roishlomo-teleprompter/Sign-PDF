@@ -92,6 +92,7 @@ function workspaceSave_(w){
 function routeContext_(token){if(typeof token!=='string'||token.length>200)throw new Error('Invalid signing link');var route=readProp_('route:'+hash_(token));if(!route)throw new Error('Signing link unavailable');setContext_(route.id);return workspaceLoad_()}
 function googleDispatch(session,action,p){
  p=p||{};
+ if(action==='i18n-catalog')return translationCatalog_(p);
  if(action==='auth-begin')return googleBegin_(p,session);
  if(action==='auth-finish')return googleFinish_(p);
  if(action==='auth-guest'){var token=randomToken_();writeProp_('session:'+hash_(token),{id:'guest:'+hash_(token),guest:true,expires:Date.now()+6*3600000});return {access_token:token,user:{id:'guest:'+hash_(token),is_anonymous:true}}}
@@ -114,7 +115,7 @@ function personalOwner_(w,p){var result;
  else if(p.op==='upload'){var r=w.tables.sign_requests.find(r=>r.original_path===p.path);if(!r||r.status!=='pending')throw new Error('Original upload unavailable');workspacePut_(w,p.path,p.base64);result={path:p.path}}
  else if(p.op==='remove'){if(!Array.isArray(p.paths)||p.paths.length>10)throw new Error('Invalid file list');for(var path of p.paths){if(!w.tables.sign_requests.some(r=>[r.original_path,r.signed_path].includes(path)))throw new Error('File ownership mismatch');w.files=w.files.filter(f=>f.path!==path)}result=p.paths.map(name=>({name:name}))}
  else if(p.op==='settings-get')return w.settings;
- else if(p.op==='settings-set'){var patch=p.settings||{};if(Object.keys(patch).some(k=>!['language','gmailSendConfirmed'].includes(k))||('language'in patch&&!['he','en'].includes(patch.language))||('gmailSendConfirmed'in patch&&typeof patch.gmailSendConfirmed!=='boolean'))throw new Error('Invalid settings');Object.assign(w.settings,patch);result=w.settings}
+ else if(p.op==='settings-set'){var patch=p.settings||{};if(Object.keys(patch).some(k=>!['language','gmailSendConfirmed'].includes(k))||('language'in patch&&!['he','en','es','pt-BR','fr','de','ar','hi','id','ja','ko','zh-CN','ru'].includes(patch.language))||('gmailSendConfirmed'in patch&&typeof patch.gmailSendConfirmed!=='boolean'))throw new Error('Invalid settings');Object.assign(w.settings,patch);result=w.settings}
  else if(p.op==='self-save')result=workspaceSelf_(w,p);
  else throw new Error('Unsupported workspace operation');
  if(!(p.op==='query'&&p.query.operation==='select'))workspaceSave_(w);return result;

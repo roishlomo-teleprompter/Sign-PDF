@@ -20,3 +20,12 @@ to the current app without loading the previous identity SDK.
 
 See [GOOGLE-ONLY-ROLLOUT.md](GOOGLE-ONLY-ROLLOUT.md) for deployment details, the verified
 55-file owner migration and outstanding acceptance/history checks.
+
+
+### Automatic interface translation
+
+The production build extracts `tr(he, en)` calls and `data-he` / `data-en` labels into a versioned public UI catalog. Expressions in messages become placeholders; user content is never included in the catalog. Apps Script LanguageApp translates the catalog on first selection of a language; results are cached in the browser and service. Hebrew and English are bundled originals. The build adds new and changed UI strings automatically on every deployment.
+
+All future interface text must use the existing `tr(he, en)` or paired data attributes. Do not translate uploaded documents, names, contacts, typed messages or signing links. Unavailable translations fall back to English. Automated translation needs human review for important wording and does not establish legal validity in any jurisdiction.
+
+Languages: he, en, es, pt-BR, fr, de, ar, hi, id, ja, ko, zh-CN, ru. The service accepts catalog identifiers only, and reads the application's fixed public catalog URL. It does not accept arbitrary translation text or URLs. No new API key or Cloud billing configuration is used. Existing Apps Script quotas apply.

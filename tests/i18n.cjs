@@ -1,0 +1,14 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {compiler,id}=require('../scripts/localize.cjs');
+test('build extracts only UI literals and keeps dynamic names outside the translation catalog',()=>{
+ const c=compiler(),source="const name='PRIVATE';tr('שלום '+name,'Hello '+name);tr('שליחה','Send');",out=c.javascript(source),catalog=c.catalog();assert(Object.values(catalog.strings).includes('Hello {p0}'));assert(!JSON.stringify(catalog).includes('PRIVATE'));let args;vm.runInNewContext(out,{tr:(...values)=>args=values});assert.equal(args[2],id('Send'));assert.equal(c.catalog().version,catalog.version);
+ const seen=[];vm.runInNewContext(out,{tr:(...values)=>seen.push(values)});assert.equal(seen[0][3][0],'PRIVATE');assert.equal(seen[0][1],'Hello PRIVATE');
+});
+test('all 13 languages have native names, Arabic and Hebrew are RTL, exact placeholders are restored',async()=>{
+ const source={version:'a'.repeat(64),strings:{greet:'Hello {p0}'}},saved=new Map(),calls=[];
+ const context={window:{SharedDrive:{create:()=>({call:async(action,payload)=>{calls.push({action,payload});return {version:source.version,strings:{greet:'Hola {p0}'}}}})}},fetch:async()=>({ok:true,json:async()=>source}),localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}};vm.createContext(context);vm.runInContext(fs.readFileSync('i18n.js','utf8'),context);const ui=context.window.SignWayI18n;assert.equal(ui.languages.length,13);assert.equal(ui.direction('ar'),'rtl');assert.equal(ui.detect('pt-PT'),'pt-BR');assert.equal(ui.detect('zh-TW'),'zh-CN');await ui.prepare('es');assert.equal(ui.translate('שלום PRIVATE','Hello PRIVATE','greet',['PRIVATE']),'Hola PRIVATE');assert(!JSON.stringify(calls).includes('PRIVATE'));const count=calls.length;await ui.prepare('es');assert.equal(calls.length,count);await ui.prepare('en');assert.equal(ui.translate('שלום','Hello'),'Hello');
+});
+test('server never accepts arbitrary text or URLs and validates placeholder preservation',()=>{
+ const calls=[],cache=new Map(),source={version:'a'.repeat(64),strings:{one:'Hello {p0}'}};
+ const context={CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},UrlFetchApp:{fetch:url=>{calls.push(url);return {getResponseCode:()=>200,getContentText:()=>JSON.stringify(source)}}},LanguageApp:{translate:(text,from,to)=>'Hola {p0}'}};vm.createContext(context);vm.runInContext(fs.readFileSync('google-drive-backend/Translations.gs','utf8'),context);assert.throws(()=>context.translationCatalog_({language:'xxx',version:source.version,offset:0}));const result=context.translationCatalog_({language:'es',version:source.version,offset:0,text:'PRIVATE',url:'https://attacker.example'});assert.equal(result.strings.one,'Hola {p0}');assert.deepEqual(calls,['https://roishlomo-teleprompter.github.io/Sign-PDF/locales/source.json']);
+});
