@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {compiler,id}=require('../scripts/localize.cjs');
 test('build extracts only UI literals and keeps dynamic names outside the translation catalog',()=>{
  const c=compiler(),source="const name='PRIVATE';tr('שלום '+name,'Hello '+name);tr('שליחה','Send');",out=c.javascript(source),catalog=c.catalog();assert(Object.values(catalog.strings).includes('Hello {p0}'));assert(!JSON.stringify(catalog).includes('PRIVATE'));let args;vm.runInNewContext(out,{tr:(...values)=>args=values});assert.equal(args[2],id('Send'));assert.equal(c.catalog().version,catalog.version);
- const seen=[];vm.runInNewContext(out,{tr:(...values)=>seen.push(values)});assert.equal(seen[0][3][0],'PRIVATE');assert.equal(seen[0][1],'Hello PRIVATE');
+ assert.throws(()=>compiler().javascript("tr('שלום',userProvidedText)"),/English UI literal/);const seen=[];vm.runInNewContext(out,{tr:(...values)=>seen.push(values)});assert.equal(seen[0][3][0],'PRIVATE');assert.equal(seen[0][1],'Hello PRIVATE');
 });
 test('all 13 languages have native names, Arabic and Hebrew are RTL, exact placeholders are restored',async()=>{
  const source={version:'a'.repeat(64),strings:{greet:'Hello {p0}'}},saved=new Map(),calls=[];

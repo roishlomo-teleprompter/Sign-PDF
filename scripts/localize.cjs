@@ -10,7 +10,7 @@ function compiler(){
    if(node.type==='CallExpression'&&node.callee.type==='Identifier'&&node.callee.name==='tr'&&node.arguments.length===2){
     const values=[];
     function template(n){if(n.type==='Literal'&&typeof n.value==='string')return n.value;if(n.type==='BinaryExpression'&&n.operator==='+')return template(n.left)+template(n.right);if(n.type==='TemplateLiteral'){let out='';n.quasis.forEach((q,i)=>{out+=q.value.cooked;if(n.expressions[i])out+=template(n.expressions[i])});return out}const i=values.push(source.slice(n.start,n.end))-1;return '{p'+i+'}'}
-    const key=add(template(node.arguments[1]));if(key)edits.push({start:node.end-1,text:','+JSON.stringify(key)+',['+values.join(',')+']'});
+    const message=template(node.arguments[1]);if(/^(?:\{p\d+\})+$/.test(message))throw new Error('Translation calls must contain an English UI literal, not arbitrary user text');const key=add(message);if(key)edits.push({start:node.end-1,text:','+JSON.stringify(key)+',['+values.join(',')+']'});
    }
    for(const v of Object.values(node))if(Array.isArray(v))v.forEach(visit);else if(v&&typeof v==='object')visit(v);
   }visit(tree);for(const e of edits.sort((a,b)=>b.start-a.start))source=source.slice(0,e.start)+e.text+source.slice(e.start);return source;
