@@ -6,10 +6,28 @@ before the new manifest became active. Original source data remains retained.
 This change replaces the default entrypoint and worker cache with the Google-only
 shell. It must not load the previous identity SDK or contact its services.
 
-The existing Google OAuth client is still Testing. Complete Branding and Audience
-publication before offering sign-in to users beyond the configured test accounts.
+The last observed Google Audience status was **In production**. Search Console
+ownership was verified; branding/data-access verification still needed follow-up.
+These Google review steps do not reintroduce the former identity or storage provider.
 Live acceptance with a second real Google account remains pending. Do not delete
 the previous backend or original files while that rollout remains incomplete.
+
+## Production artifact and remaining historical-data check
+
+`npm run build` creates a public allowlist in `dist/`. The single Pages workflow
+publishes only this output, not the repository root. No former SDK, identity adapter,
+backend source or old migration UI is included. The retired preview/migration URLs
+redirect to the Google-only home, preserving their query and fragment. Earlier
+source and SQL remain in Git as history, not as production entrypoints.
+
+On 2026-11-14 the former project was still listed as active. Read-only table inventory
+and aggregate record-count queries both failed with database authentication errors
+through the connected service. Consequently, this audit cannot assert that all
+other accounts' old data was exported or that the previous project may be deleted.
+The verified owner transfer remains the 55-file migration described above. The old
+project is not used by the new application's runtime, but shutdown/billing cleanup
+and any unverified histories require access to that project's existing data first.
+
 
 ## Implemented
 

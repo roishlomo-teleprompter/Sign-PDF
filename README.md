@@ -1,17 +1,22 @@
-# Sign PDF
+# SignWay - חתימה בדרך
 
-אתר ציבורי ופשוט לחתימה גרפית על מסמכי PDF.
+אפליקציית רשת ליצירת בקשות חתימה, חתימה על PDF ושיתוף מסמכים.
 
-- המסמך והחתימה מעובדים מקומית בדפדפן.
-- אין העלאה לשרת ואין צורך בחשבון משתמש.
-- ניתן לצייר חתימה, למקם אותה על כל עמוד ולהוריד PDF חתום.
+- התחברות בעלי מסמכים מתבצעת באמצעות Google.
+- מסמכים, חתימות, אנשי קשר, קבוצות ובקשות נשמרים ב־Drive האישי של המשתמש.
+- Google Apps Script מטפל בהרשאות, ניתוב ועיבוד חתימות; נתוני חיבור נשמרים גם בשירות.
+- נמענים משתמשים בקישור חתימה אישי. במסמך משותף החתימות מצטברות באותו PDF.
+- הרשאת Gmail לשליחה היא אופציונלית ונפרדת. יצירת בקשה אינה שולחת הזמנות אוטומטית.
 
-האתר משתמש ב-pdf.js להצגה וב-pdf-lib ליצירת הקובץ החתום.
+## Build and publication
 
-## SignWay branding
+`npm ci` installs test dependencies; `npm test` runs the regression suite.
+`npm run build` creates the Google-only static site in `dist/`.
+`.github/workflows/pages.yml` publishes only that directory.
 
-The selected concept 1 (white pen and winding S road on blue) is in `icons/signway-logo.png`. Installation icons, favicon and Apple touch icon derive from this master. The maskable icon keeps the complete mark inside its safe area. The manifest id, start URL and scope stay unchanged to preserve installed app identity.
+Historical adapters, SQL and migration sources stay in Git for reference and recovery;
+they are excluded from the published site. Retired preview/migration pages redirect
+to the current app without loading the previous identity SDK.
 
-## Self-signing
-
-Choose a PDF and select **Sign it myself**, position the signature and draw it, then prepare the signed PDF. Save downloads the file. Send opens the device share sheet with the signed PDF attached, where the user chooses email or WhatsApp and completes delivery. Unsupported browsers keep Save available with manual-attachment instructions. This local flow creates no signing request and does not upload the PDF. A changed or removed signature invalidates the prepared output.
+See [GOOGLE-ONLY-ROLLOUT.md](GOOGLE-ONLY-ROLLOUT.md) for deployment details, the verified
+55-file owner migration and outstanding acceptance/history checks.
