@@ -1,6 +1,11 @@
 {
   "name": "sign-pdf",
   "private": true,
-  "scripts": {"test": "node --test tests/*.cjs"},
-  "devDependencies": {"jsdom": "30.1.3"}
+  "scripts": {
+    "test": "node --test tests/*.cjs",
+    "build": "node scripts/build-public.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3"
+  }
 }
