@@ -235,3 +235,4 @@ body[data-screen=upload][data-flow=link] #changeUploadBtn{width:100%;min-height:
 .preview-error{padding:14px;background:#fff3f4;color:#a34355;font-size:14px;line-height:1.6;flex:none}
 @media(max-width:600px){.document-preview-dialog.canvas-preview{width:calc(100vw - 16px);height:calc(100dvh - 16px);border-radius:18px}.preview-header{padding:10px 12px}.preview-stage{padding:8px}.preview-controls{gap:7px}}
 .doc-row[data-state="cancelled"] .badge{background:#000;color:#fff}
+.doc-summary .badge.expired-badge{background:#e5e7eb;color:#4b5563}
