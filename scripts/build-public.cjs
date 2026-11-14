@@ -26,6 +26,10 @@ function build(destination=path.join(ROOT,'dist')){
  fs.mkdirSync(path.join(destination,'locales'),{recursive:true});fs.writeFileSync(path.join(destination,'locales/source.json'),JSON.stringify(compiler.catalog()));
  const redirect='<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>SignWay</title></head><body><p>המשך לגרסת SignWay המעודכנת.</p><a href="./">פתיחת SignWay</a><script>const target=new URL("./",location.href);target.search=location.search;target.hash=location.hash;location.replace(target.href);</script></body></html>';
  for(const file of RETIRED_PAGES)fs.writeFileSync(path.join(destination,file),redirect);
+ // Every source change gets a new service-worker cache, including future UI strings.
+ const crypto=require('node:crypto'),digest=crypto.createHash('sha256');
+ for(const file of [...PUBLIC_FILES,'locales/source.json'].sort())digest.update(file).update(fs.readFileSync(path.join(destination,file)));
+ const worker=path.join(destination,'sw.js');fs.writeFileSync(worker,fs.readFileSync(worker,'utf8').replace(/const CACHE_VERSION='[^']+'/,'const CACHE_VERSION='+JSON.stringify('sign-pdf-shell-'+digest.digest('hex').slice(0,20)+'-google')));
  fs.writeFileSync(path.join(destination,'.nojekyll'),'');
  return destination;
 }
