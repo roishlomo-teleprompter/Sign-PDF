@@ -29,7 +29,13 @@ function build(destination=path.join(ROOT,'dist')){
  // Every source change gets a new service-worker cache, including future UI strings.
  const crypto=require('node:crypto'),digest=crypto.createHash('sha256');
  for(const file of [...PUBLIC_FILES,'locales/source.json'].sort())digest.update(file).update(fs.readFileSync(path.join(destination,file)));
- const worker=path.join(destination,'sw.js');fs.writeFileSync(worker,fs.readFileSync(worker,'utf8').replace(/const CACHE_VERSION='[^']+'/,'const CACHE_VERSION='+JSON.stringify('sign-pdf-shell-'+digest.digest('hex').slice(0,20)+'-google')));
+ const revision=digest.digest('hex').slice(0,20);
+ const version=url=>{const file=url.replace(/^\.\//,'').split('?')[0];return file!=='sw.js'&&PUBLIC_FILES.includes(file)&&/\.(js|css)$/.test(file)?url.split('?')[0]+'?v='+revision:url};
+ for(const file of ['index.html','google-drive.html']){const target=path.join(destination,file);fs.writeFileSync(target,fs.readFileSync(target,'utf8').replace(/\b(src|href)="([^"\s]+)"/g,(_,attribute,url)=>attribute+'="'+version(url)+'"'))}
+ const catalogUrl='./locales/source.json?v='+revision;
+ const client=path.join(destination,'i18n.js');fs.writeFileSync(client,fs.readFileSync(client,'utf8').replace("'./locales/source.json'",JSON.stringify(catalogUrl)));
+ const worker=path.join(destination,'sw.js');let workerCode=fs.readFileSync(worker,'utf8').replace(/const CACHE_VERSION='[^']+'/,'const CACHE_VERSION='+JSON.stringify('sign-pdf-shell-'+revision+'-google'));
+ workerCode=workerCode.replace(/'([^'\s]+\.(?:js|css)(?:\?[^']*)?)'/g,(_,url)=>JSON.stringify(version(url))).replace("'./locales/source.json'",JSON.stringify(catalogUrl));fs.writeFileSync(worker,workerCode);
  fs.writeFileSync(path.join(destination,'.nojekyll'),'');
  return destination;
 }
