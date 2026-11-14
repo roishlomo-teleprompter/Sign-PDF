@@ -238,3 +238,4 @@ body[data-screen=upload][data-flow=link] #changeUploadBtn{width:100%;min-height:
 .doc-summary .badge.expired-badge{background:#e5e7eb;color:#4b5563}
 
 .upload-actions #cancelSelectedBtn{background:#fff1f3;color:#b4233d;border:1px solid #f0cbd3;box-shadow:none}
+html:not([lang="he"]) .hebrew-slogan{display:none}
