@@ -17,6 +17,18 @@ function doGet(e){
  if(p.code||p.error){try{return googleCallbackPage_(googleCallback_(p),null)}catch(error){var issue=googleCallbackIssue_(error);console.warn('Sign Away OAuth callback: '+issue.code);return googleCallbackPage_(null,issue)}}
  return HtmlService.createHtmlOutput('<p>Sign Away Google service</p>');
 }
+// Recipient RPC deliberately omits Google browser identity. Personal links remain the authority.
+function doPost(e){
+ var result,id=null;
+ try{
+  var raw=e&&e.postData&&e.postData.contents;if(typeof raw!=='string'||raw.length>8*1024*1024)throw new Error('Invalid request');
+  var request=JSON.parse(raw);id=request.id;
+  if(request.protocol!=='signaway-public-v1'||typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id))throw new Error('Invalid request');
+  if(!['shared-public-read','shared-public-sign','shared-public-result','i18n-catalog'].includes(request.action))throw new Error('Unsupported public operation');
+  result={protocol:'signaway-public-v1',id:id,data:googleDispatch(null,request.action,request.payload)};
+ }catch(error){result={protocol:'signaway-public-v1',id:id,error:String(error.message||'Request failed')}}
+ return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
 function googleCallbackIssue_(error){
  var message=String(error&&error.message||''),rules=[
   [/Invalid state|Authorization expired/,'STATE_EXPIRED','בקשת ההתחברות פגה. חזרו לאפליקציה והתחילו התחברות חדשה.','The sign-in request expired. Return to the app and start again.'],
