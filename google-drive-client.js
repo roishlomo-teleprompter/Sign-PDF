@@ -42,6 +42,7 @@ window.GoogleDriveClient=(()=>{
   db.signwayDeleteSignedDocuments=async ids=>finishDeletion(await transport.call('workspace-owner-call',{op:'documents-delete-signed',ids}));
   db.signwayDeleteSharedDocuments=async ids=>finishDeletion(await transport.call('workspace-owner-call',{op:'shared-delete-many',ids}));
   db.signwayDeleteSharedDocument=async id=>finishDeletion(await transport.call('workspace-owner-call',{op:'shared-delete',id}));
+  db.signwayDeleteDocumentGroup=async id=>{const result=await db.from('signature_events').delete().eq('id',id);if(result.error)throw result.error;return finishDeletion({cleanupPending:true})};
   db.signwayDeleteDocument=async id=>finishDeletion(await transport.call('workspace-owner-call',{op:'document-delete',id}));
   db.signwayCompactStorage=async()=>{let result,total=0,rounds=0;do{rounds++;result=await transport.call('workspace-owner-call',{op:'storage-compact'});total+=result.trashed||0;if(result.more)await new Promise(resolve=>setTimeout(resolve,350))}while(result.more&&total<1600&&rounds<100&&!(result.cleanupPending&&!result.filesCleaned));return {...result,trashed:total}};
   db.signwayGmailToken=async()=>{const r=await transport.call('auth-gmail-token');return r.token};
