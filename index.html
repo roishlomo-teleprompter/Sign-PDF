@@ -93,6 +93,8 @@
   <script>
     let startupComplete=false,startupAnimationFinished=false,startupAnimationTimer,startupHoldTimer;
     const startupCard=document.getElementById('startupCard'),startupHeader=document.querySelector('.topbar'),startupShell=document.querySelector('.app-shell');
+    // Cached profile is visual only. Access still waits for Google's verified session.
+    try{const cached=JSON.parse(localStorage.getItem('signway-google-session-v2')||'null')?.user;if(cached&&!cached.is_anonymous&&typeof cached.email==='string'){const preview=document.createElement('section');preview.className='account-bar startup-account-preview';const avatar=document.createElement('span');avatar.className='profile-button';avatar.setAttribute('aria-hidden','true');preview.title=cached.email;const name=String(cached.user_metadata?.full_name||cached.email.split('@')[0]),parts=name.trim().split(/[\s._-]+/u).filter(Boolean);avatar.textContent=(parts.length>1?Array.from(parts[0])[0]+Array.from(parts[parts.length-1])[0]:Array.from(parts[0]||'G').slice(0,2).join('')).toUpperCase();const photo=cached.user_metadata?.avatar_url||cached.user_metadata?.picture;if(typeof photo==='string'&&/^https:\/\//.test(photo)){const img=document.createElement('img');img.src=photo;img.alt='';img.referrerPolicy='no-referrer';img.onerror=()=>img.remove();avatar.append(img)}preview.append(avatar);document.querySelector('.header-tools').append(preview)}}catch{}
     const startupTop=startupCard.getBoundingClientRect().top;
     document.body.style.setProperty('--startup-height',Math.max(0,window.innerHeight-startupTop)+'px');
     document.body.style.setProperty('--startup-top',startupTop+'px');
@@ -210,11 +212,13 @@
     }
 
     function showLogin(user){
+      document.querySelector('.startup-account-preview')?.remove();
       sharedOwner?.remove();sharedOwner=null;ownerId=null;document.body.classList.add('login-mode');
       $('appContent').classList.add('hidden');eventDashboard?.remove();eventDashboard=null;
       accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,gate:true});
     }
     function showOwner(user){
+      document.querySelector('.startup-account-preview')?.remove();
       if(!user||user.is_anonymous){showLogin(user);return}
       if(ownerId===user.id&&eventDashboard){accountControls?.setUser(user);return}
       document.body.classList.remove('login-mode');sharedOwner?.remove();sharedOwner=null;ownerId=user.id;
