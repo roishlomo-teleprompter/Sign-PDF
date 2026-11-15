@@ -25,9 +25,9 @@ function workspaceQuery_(w,p){
  }else if(q.operation==='delete'){
   if(!filters.length)throw new Error('A delete filter is required');
   const ids=rows.map(r=>r.id);w.tables[table]=w.tables[table].filter(r=>!ids.includes(r.id));
-  if(table==='signature_events')w.tables.event_participants=w.tables.event_participants.filter(p=>!ids.includes(p.event_id));
-  // Immutable revisions retain recoverable copies; only current references disappear.
-  if(table==='sign_requests'){const paths=rows.flatMap(r=>[r.original_path,r.signed_path]);w.files=w.files.filter(f=>!paths.includes(f.path))}
+  if(table==='signature_events'){const people=w.tables.event_participants.filter(p=>ids.includes(p.event_id)),requests=people.flatMap(p=>p.requests.map(r=>r.request_id));w.tables.event_participants=w.tables.event_participants.filter(p=>!ids.includes(p.event_id));workspaceRemoveDocuments_(w,requests)}
+  if(table==='sign_requests')workspaceRemoveDocuments_(w,ids,rows);
+
  }
  if(q.order){if(!['created_at','id'].includes(q.order.column))throw new Error('Invalid order');rows.sort((a,b)=>String(a[q.order.column]).localeCompare(String(b[q.order.column]))*(q.order.ascending===false?-1:1))}
  if(q.limit!==undefined){if(!Number.isInteger(q.limit)||q.limit<0||q.limit>10000)throw new Error('Invalid limit');rows=rows.slice(0,q.limit)}
@@ -118,3 +118,9 @@ function workspacePublic_(w,actor,p){
  }
  workspaceSave_(w);return result;
 }
+
+function workspaceQueueFiles_(w,paths){const removing=w.files.filter(f=>paths.includes(f.path)),remaining=w.files.filter(f=>!paths.includes(f.path));w.pendingFileTrash=Array.from(new Set([...(w.pendingFileTrash||[]),...removing.filter(f=>!remaining.some(other=>other.fileId===f.fileId)).map(f=>f.fileId)]));w.files=remaining}
+function workspaceRemoveDocuments_(w,ids,knownRows){const rows=knownRows||w.tables.sign_requests.filter(r=>ids.includes(r.id));workspaceQueueFiles_(w,rows.flatMap(r=>[r.original_path,r.signed_path]).filter(Boolean));w.tables.sign_requests=w.tables.sign_requests.filter(r=>!ids.includes(r.id));for(const p of w.tables.event_participants)p.requests=p.requests.filter(r=>!ids.includes(r.request_id))}
+/* A committed cleanup queue allows recovery after a Drive timeout without losing
+ * the reference to a PDF or touching files belonging to unrelated documents. */
+function workspacePurgeFiles_(w){const pending=w.pendingFileTrash||[],keep=[];let cleaned=0,attempted=0;for(const id of pending){if(attempted++>=3){keep.push(id);continue}try{if(w.files.some(f=>f.fileId===id))throw new Error('File still referenced');const meta=personalJson_('drive/v3/files/'+id+'?fields=id,trashed');if(!meta.trashed)personalJson_('drive/v3/files/'+id,'patch',{trashed:true});cleaned++}catch(e){keep.push(id)}}w.pendingFileTrash=keep;return cleaned}
