@@ -260,3 +260,7 @@ body[data-screen=upload] .upload-row{grid-template-columns:minmax(0,1fr)}body[da
 
 /* The intro signs directly on the app surface, once, before revealing ready content. */
 body.startup-pending{overflow:hidden}body.startup-pending #appContent,body.startup-pending .login-gate{visibility:hidden;pointer-events:none}#startupCard.signature-startup{position:fixed;inset:100px 0 0;z-index:1200;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:none;height:calc(100dvh - 100px);min-height:0;margin:0;padding:20px 16px 40px;border:0;border-radius:0;box-shadow:none;background:radial-gradient(ellipse at 50% 40%,#fff 20%,#f6f8ff 95%)}#startupCard .startup-art{width:min(560px,94vw);max-width:none;margin:0}#startupCard .startup-glow,#startupCard .startup-brand{display:none}#startupCard .startup-signature-scene{filter:none}#startupCard.signature-startup h1{margin:14px 0 6px;font-size:22px}#startupCard.signature-complete .startup-writing-hand{opacity:1}#startupCard.startup-error .startup-art{display:none}@media(max-width:600px){#startupCard.signature-startup{inset:86px 0 0;height:calc(100dvh - 86px);padding:12px 14px 36px}#startupCard.signature-startup h1{font-size:20px}}
+
+/* The empty upload screen reserves its available space for the upload circle. */
+body[data-screen=upload][data-flow=choose] .upload-row:has(>.upload-actions.hidden){grid-template-rows:minmax(0,1fr) auto}
+body[data-screen=upload][data-flow=choose] .upload-row:has(>.upload-actions.hidden) .upload{height:min(380px,calc(100vw - 88px),calc(100% - 56px))}
