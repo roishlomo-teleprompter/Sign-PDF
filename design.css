@@ -380,3 +380,27 @@ body.upload-pending .upload[aria-busy=true]::after{box-sizing:border-box}
 .mail-batch-dialog .mail-batch-header p{font-size:12px;line-height:1.55}
 .mail-batch-dialog .mail-batch-footer{flex-wrap:nowrap;padding:10px 20px 13px;gap:8px}
 .mail-batch-dialog .mail-batch-footer button{flex:0 0 auto;height:auto;min-height:42px;padding:10px 14px;font-size:14px;line-height:1.4}
+
+/* Shared request tracking, approved compact card layout. */
+#sharedOwnerPanel.shared-tracking{max-width:620px;margin:0 auto 20px;padding:20px;border-radius:22px;background:#fff;border:1px solid #e1e7f2;box-shadow:0 8px 30px #213b7008}
+.shared-tracking .tracking-heading h2{font-size:23px;line-height:1.4;margin:0 0 16px;color:#14264a;text-align:start}
+.shared-tracking .tracking-document{border:1px solid #d8e4fb;border-radius:17px;padding:15px;background:linear-gradient(140deg,#f6f9ff,#edf3ff);margin-bottom:13px}
+.shared-tracking .tracking-document-name{display:flex;align-items:center;gap:10px;color:#1d3c72;font-size:17px;min-width:0}
+.shared-tracking .tracking-document-name svg{color:#2455f5;width:25px;height:25px}.shared-tracking .tracking-document-name strong{overflow-wrap:anywhere}
+.shared-tracking .shared-progress{margin:13px 0 0;padding:11px 12px;border:0;border-radius:12px;background:#ffffffa6;text-align:center}
+.shared-tracking .shared-progress strong{font-size:14px;line-height:1.5}.shared-tracking .shared-progress progress{height:5px;margin-top:9px}
+.shared-tracking .shared-people{display:grid;gap:9px;margin:0 0 15px}
+.shared-tracking .shared-person{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #e0e7f3;border-radius:14px;background:#fff;margin:0;min-width:0}
+.shared-tracking .contact-avatar{width:36px;height:36px;min-width:36px;font-size:16px;margin:0}
+.shared-tracking .tracking-person-copy{flex:1;min-width:0}.shared-tracking .tracking-person-copy strong{font-size:15px;line-height:1.4;display:block;overflow-wrap:anywhere}
+.shared-tracking .tracking-status{display:inline-block!important;margin-top:5px;padding:3px 8px;border-radius:999px;background:#f0f2f6;color:#6b778c;font-size:11px;line-height:1.4}.shared-tracking .tracking-status.is-signed{background:#e2f6ed;color:#167651}
+.shared-tracking .shared-person-tools{display:flex;flex-shrink:0;gap:4px;padding-inline-start:9px;border-inline-start:1px solid #e0e7f3}
+.shared-tracking .shared-person-tools button{width:32px;min-width:32px;height:36px;min-height:36px;padding:6px;border-radius:9px;background:#f1f6ff;color:#2455f5}.shared-tracking .shared-person-tools button svg{width:18px;height:18px}
+.shared-tracking .tracking-toolbar{display:flex;align-items:stretch;border:1px solid #cfe5ef;border-radius:13px;background:linear-gradient(120deg,#f1fbfc,#edf4ff);padding:7px 0;margin-bottom:11px}
+.shared-tracking .tracking-toolbar button{flex:1;min-width:0;min-height:48px;height:auto;padding:3px 6px;background:transparent;color:#2455f5;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.4;border-radius:0;border:0;box-shadow:none;white-space:normal;overflow-wrap:anywhere}
+.shared-tracking .tracking-toolbar button+button{border-inline-start:1px solid #c9deef}.shared-tracking .tracking-toolbar svg{width:22px;height:22px}
+.shared-tracking .tracking-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.shared-tracking .tracking-secondary button{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:43px;height:auto;padding:9px 7px;border:1px solid #2455f5;border-radius:11px;background:#fff;color:#2455f5;font-size:13px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;box-shadow:none}
+.shared-tracking .tracking-secondary button>span{font-size:22px;line-height:1}.shared-tracking .tracking-secondary .tracking-cancel{border-color:#e4a2ac;color:#b34355;background:#fffafb}
+.shared-tracking .tracking-privacy{font-size:11px;line-height:1.6;color:#7a879d;text-align:center;margin:13px 0 0}.shared-tracking .shared-error:empty{display:none}
+@media(max-width:380px){#sharedOwnerPanel.shared-tracking{padding:14px}.shared-tracking .shared-person{padding:10px 8px;gap:7px}.shared-tracking .shared-person-tools{gap:2px;padding-inline-start:6px}.shared-tracking .shared-person-tools button{width:29px;min-width:29px;padding:5px}.shared-tracking .tracking-status{font-size:10px}.shared-tracking .tracking-secondary button{font-size:12px}}
