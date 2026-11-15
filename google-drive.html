@@ -220,6 +220,7 @@
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments})}
       if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr})}
       window.GoogleMigration?.mount({db,tr});
+      db.signwayCompactStorage?.().catch(error=>console.warn('Drive cleanup deferred: '+error.message));
       if(window.SharedSignatures&&window.SharedDrive?.enabled(user)){sharedOwner=SharedSignatures.owner({db,ownerId,tr,saveBlob,selected:()=>selectedUpload,onAvailable:()=>refreshUploadLabel(),showFlow:flow=>{if(flow==='shared')eventDashboard?.selectTab?.('upload');setFlow(flow)},confirmCancel:()=>askConfirm(tr('ביטול בקשת החתימות','Cancel signature request'),tr('הקישורים יפסיקו לפעול. החתימות שכבר נשמרו יישארו במסמך.','Personal links will stop working. Existing signatures remain in the document.'),tr('ביטול הבקשה','Cancel request')),mail:options=>GmailMail.compose({db,ownerId,tr,...options})});$('createSharedBtn').onclick=()=>sharedOwner.openEditor();sharedOwner.refresh()}
     }
 

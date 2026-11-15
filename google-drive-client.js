@@ -38,6 +38,7 @@ window.GoogleDriveClient=(()=>{
   };
   window.SharedDrive={create:()=>transport,enabled:user=>!!user&&!user.is_anonymous&&!!user.id};
   const db=GoogleWorkspace.create({auth});
+  db.signwayCompactStorage=()=>transport.call('workspace-owner-call',{op:'storage-compact'});
   db.signwayGmailToken=async()=>{const r=await transport.call('auth-gmail-token');return r.token};
   return db;
  }
