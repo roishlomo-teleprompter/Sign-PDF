@@ -44,7 +44,7 @@ window.GoogleDriveClient=(()=>{
  function googleTransport(endpoint,sessionToken){
   let source,origin,disposed=false,readyResolve,readyReject;const pending=new Map(),channel=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
   const ready=new Promise((resolve,reject)=>{readyResolve=resolve;readyReject=reject});ready.catch(()=>{});const timer=setTimeout(()=>readyReject(new Error('Google service connection timed out')),25000);
-  const frame=document.createElement('iframe');frame.hidden=true;frame.referrerPolicy='no-referrer';frame.title='SignWay Google connection';frame.src=endpoint+'?mode=bridge&channel='+channel;
+  const frame=document.createElement('iframe');frame.hidden=true;frame.referrerPolicy='no-referrer';frame.title='Sign Away Google connection';frame.src=endpoint+'?mode=bridge&channel='+channel;
   function receive(event){const m=event.data;if(disposed||!m||m.channel!==channel||!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(event.origin))return;
    if(m.type==='signway-drive-ready'&&!source){source=event.source;origin=event.origin;clearTimeout(timer);readyResolve();return}
    if(event.source!==source||event.origin!==origin||m.type!=='signway-drive-result')return;const task=pending.get(m.id);if(!task)return;pending.delete(m.id);clearTimeout(task.timer);m.error?task.reject(new Error(m.error)):task.resolve(m.data);

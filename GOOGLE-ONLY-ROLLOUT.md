@@ -36,7 +36,7 @@ bridge and personal Drive adapter. It never imports the previous SDK or transpor
 `google-drive-backend/` is a standalone Apps Script project, not an addition to the
 existing project's files. Do not combine its global functions with the old project.
 
-Each verified Google `sub` gets its own private `SignWay` root with Originals,
+Each verified Google `sub` gets its own private `Sign Away` root with Originals,
 Signed, Shared and Data. Drive REST requests carry **that user's** access token,
 not the deployment owner's identity. Contacts, groups, requests, answers and settings
 live in immutable private JSON manifests. No Google Sheets file is needed for user

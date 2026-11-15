@@ -6,7 +6,7 @@ This branch adds the missing copy/checkpoint stage on top of current main. It do
 
 The installed Sheet owner is verified with the fixed Auth endpoint for every call. Source reads use that same short-lived user token and existing row-level policies, filtered by the verified owner ID. The source origin, bucket and tables cannot be supplied by the browser.
 
-A private `SignWay/Migration-<owner UUID>/` folder holds:
+A private `Sign Away/Migration-<owner UUID>/` folder holds:
 
 - A JSON checkpoint containing the complete owner-scoped `sign_requests`, `signature_groups` (including contacts), `signature_events` and `event_participants` rows. Request IDs, original capability hashes, participant tokens, answers and storage paths remain intact for future link-compatible routing. These private records are never returned to the browser.
 - Original PDFs and completed signed PDFs, with a mapping from each original path to the verified Drive file ID, byte length and SHA-256. A pending request's generated signed path is a reservation, not an existing PDF, and is not downloaded.

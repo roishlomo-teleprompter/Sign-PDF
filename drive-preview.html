@@ -7,12 +7,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="SignWay - חתימה בדרך">
+  <meta name="apple-mobile-web-app-title" content="Sign Away">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-  <title>SignWay - חתימה בדרך</title>
+  <title>Sign Away</title>
   <style>
     :root{--ink:#14251e;--muted:#66736d;--brand:#176b4d;--brand2:#0e4c37;--paper:#fff;--bg:#f2f5f2;--line:#d8e0db;--danger:#b3261e}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Hebrew",sans-serif;min-height:100vh}
@@ -60,7 +60,7 @@
 </head>
 <body>
   <main class="app-shell">
-    <div class="topbar"><div class="lang-switch"><button id="englishBtn" type="button">English</button><button id="hebrewBtn" class="active" type="button">עברית</button></div><div class="brand"><img class="brand-icon" src="icons/signway-logo.png" width="48" height="48" alt=""><span class="brand-copy"><b dir="ltr">SignWay</b><small>חתימה בדרך</small></span></div></div>
+    <div class="topbar"><div class="lang-switch"><button id="englishBtn" type="button">English</button><button id="hebrewBtn" class="active" type="button">עברית</button></div><div class="brand"><img class="brand-icon" src="icons/signway-logo.png" width="48" height="48" alt=""><span class="brand-copy"><b dir="ltr">Sign Away</b><small>חתימה בדרך</small></span></div></div>
     <section class="auth-card" id="startupCard" role="status" aria-live="polite"><h1 id="startupTitle">טוען את האפליקציה...</h1><p id="startupMessage">בודק את החיבור. המסך ייפתח מיד.</p><button id="retryStartup" class="primary hidden" type="button" onclick="location.reload()">ניסיון נוסף / Retry</button><noscript><p>יש להפעיל JavaScript בדפדפן כדי להשתמש באפליקציה.</p></noscript></section>
     <div id="appContent" class="hidden">
     <div class="intro"><h1 id="greeting" data-he="שלום, איזה מסמך שולחים?" data-en="Hello, which document are we sending?">שלום, איזה מסמך שולחים?</h1></div>
@@ -125,7 +125,7 @@ window.DriveStorage=(()=>{
    const p=pending.get(m.id);if(!p)return;pending.delete(m.id);clearTimeout(p.timer);m.error?p.reject(new Error(m.error)):p.resolve(m.data);
   }
   window.addEventListener('message',receive);
-  frame=document.createElement('iframe');frame.hidden=true;frame.title='SignWay Drive connection';frame.referrerPolicy='no-referrer';frame.src=ENDPOINT+'?mode=bridge&channel='+channel;document.body.append(frame);
+  frame=document.createElement('iframe');frame.hidden=true;frame.title='Sign Away Drive connection';frame.referrerPolicy='no-referrer';frame.src=ENDPOINT+'?mode=bridge&channel='+channel;document.body.append(frame);
   async function call(action,payload={}){
    await ready;if(disposed)throw new Error('Drive connection closed');
    const {data,error}=await db.auth.getSession();if(error||!data?.session?.access_token)throw new Error('נדרשת התחברות מחדש.');
@@ -220,7 +220,7 @@ window.DriveStorage=(()=>{
       if(!user||user.is_anonymous){showLogin(user);return}
       if(ownerId===user.id&&eventDashboard){accountControls?.setUser(user);return}
       document.body.classList.remove('login-mode');ownerId=user.id;driveStore?.dispose();driveStore=window.DriveStorage?.enabled(user)?DriveStorage.create(db):null;
-      document.getElementById('driveStorageNotice')?.remove();if(driveStore)$('uploadCard').insertAdjacentHTML('afterbegin','<p id="driveStorageNotice" class="hint">'+tr('מסמכים חדשים נשמרים ב-Google Drive שלך ובגיליון SignWay-Pilot. PDF עד 5MB.','New documents are saved in your Google Drive and SignWay-Pilot sheet. PDFs up to 5MB.')+'</p>');
+      document.getElementById('driveStorageNotice')?.remove();if(driveStore)$('uploadCard').insertAdjacentHTML('afterbegin','<p id="driveStorageNotice" class="hint">'+tr('מסמכים חדשים נשמרים ב-Google Drive שלך ובגיליון Sign Away-Pilot. PDF עד 5MB.','New documents are saved in your Google Drive and Sign Away-Pilot sheet. PDFs up to 5MB.')+'</p>');
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       // Drive validation page exposes standalone PDFs only; event uploads still use the legacy backend.
@@ -337,7 +337,7 @@ window.DriveStorage=(()=>{
       try{status(signingRequest?tr('שולח את המסמך החתום...','Sending the signed document...'):tr('יוצר את הקובץ החתום...','Creating the signed document...'));const blob=await buildSignedPdf();if(version!==artifactVersion){button.disabled=!signatureData;return}if(signingRequest){const uploaded=await db.storage.from(STORAGE_BUCKET).upload(signingRequest.signed_path,blob,{contentType:'application/pdf',upsert:false});if(uploaded.error)throw uploaded.error;const completed=await db.rpc('complete_sign_request',{p_token:signingToken});if(completed.error)throw completed.error;$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';actionToolbar.classList.add('hidden');$('hint').classList.add('hidden');if(eventFlow){await eventFlow.completed()}else{$('signerCard').insertAdjacentHTML('beforeend',`<div class="signer-success"><strong>${tr('המסמך נחתם ונשלח בהצלחה','The document was signed and sent successfully')}</strong><br>${tr('אפשר לסגור את החלון.','You can close this window.')}</div>`)}status(tr('החתימה הושלמה בהצלחה.','Signing completed successfully.'))}else{signedFile=new File([blob],currentFileName.replace(/\.pdf$/i,'')+tr('-חתום.pdf','-signed.pdf'),{type:'application/pdf'});updateSignAction();$('signedFileName').textContent=signedFile.name;$('signedOutput').classList.remove('hidden');$('pdfViewerOverlay').classList.add('hidden');document.body.style.overflow='';button.disabled=false;status(tr('המסמך החתום מוכן. אפשר לשמור או לשלוח במייל או בוואטסאפ.','Your signed PDF is ready. Save it or send by email or WhatsApp.'))}}catch(e){console.error(e);status(tr('אירעה שגיאה בשליחת הקובץ החתום: ','An error occurred while sending the signed file: ')+(e.message||''),true);button.disabled=false}
     };
 
-    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title='SignWay - חתימה בדרך';signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);updateSignAction();$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('עריכת חתימה','Edit signature'):tr('פתיחה וחתימה','Open and sign');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render();accountControls?.render()}if(document.body.classList.contains('login-mode'))accountControls?.render();if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
+    function setLanguage(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr';document.title='Sign Away';signatureImg.alt=tr('החתימה שלך','Your signature');document.querySelectorAll('[data-he]').forEach(el=>el.textContent=el.dataset[lang]);updateSignAction();$('prevBtn').setAttribute('aria-label',tr('העמוד הקודם','Previous page'));$('nextBtn').setAttribute('aria-label',tr('העמוד הבא','Next page'));$('closePdfBtn').setAttribute('aria-label',tr('יציאה','Exit'));updateViewerModeButton();$('hebrewBtn').classList.toggle('active',lang==='he');$('englishBtn').classList.toggle('active',lang==='en');updateGreeting();if(pdfDoc){$('drawBtn').textContent=signatureData?tr('עריכת חתימה','Edit signature'):tr('פתיחה וחתימה','Open and sign');signingDate=new Date().toLocaleDateString(lang==='he'?'he-IL':'en-GB');$('signatureDate').textContent=signingDate;if(!$('pdfViewerOverlay').classList.contains('hidden'))fitViewer()}if(!signingToken&&!eventToken&&$('appContent').classList.contains('hidden')===false){loadDocuments();eventDashboard?.render();accountControls?.render()}if(document.body.classList.contains('login-mode'))accountControls?.render();if(eventFlow)eventFlow.refresh().catch(e=>status(e.message,true))}
     $('hebrewBtn').onclick=()=>setLanguage('he');$('englishBtn').onclick=()=>setLanguage('en');
     db.auth.onAuthStateChange((event,session)=>{
       if(signingToken||eventToken)return;

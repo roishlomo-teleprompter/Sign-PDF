@@ -12,7 +12,7 @@ The configured installation currently belongs to its existing Sheet owner. The s
 
 ## Data and authority
 
-- `SignWay/Shared/<document UUID>/` holds the immutable original PDF, owner-assigned name-label PNGs, immutable signer PNGs, per-revision PDFs and JSON manifests.
+- `Sign Away/Shared/<document UUID>/` holds the immutable original PDF, owner-assigned name-label PNGs, immutable signer PNGs, per-revision PDFs and JSON manifests.
 - The private `SharedDocuments` Sheet has one row per document. A single row update publishes the metadata/PDF pointers, revision, status and signer count together.
 - Every signer has a separate 256-bit-class random bearer token, scoped to one document and one assigned signer. Owner-only responses include share links. Recipient responses omit email addresses and other bearer tokens.
 - Links expire after 30 days. The owner can cancel a request without deleting accepted signatures. Only the owner can download a cancelled document.
@@ -25,7 +25,7 @@ The configured installation currently belongs to its existing Sheet owner. The s
 
 ## Existing Apps Script deployment
 
-Target: the existing SignWay bound Apps Script project and its existing `/exec` deployment. Do not create another Sheet, publish folders or change file-sharing permissions.
+Target: the existing Sign Away bound Apps Script project and its existing `/exec` deployment. Do not create another Sheet, publish folders or change file-sharing permissions.
 
 1. Back up the current project source/version through the Apps Script editor.
 2. Update `Code.gs` with the shared-action dispatcher and update `Bridge.html` with the bounded shared action allowlist. Add `Shared.gs`. Preserve existing `Admin.html`, `Signer.html`, Script Properties and the manifest.

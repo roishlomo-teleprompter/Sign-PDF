@@ -1,7 +1,7 @@
 /* One-time Google-authenticated export. Installed only on the existing Drive service.
  * No previous identity provider is contacted; no source files are deleted. */
 function legacyMigrationFrozen_(){return !!PropertiesService.getScriptProperties().getProperty('GOOGLE_ONLY_FREEZE')}
-function legacyMigrationWritable_(){if(legacyMigrationFrozen_())throw new Error('הנתונים הועברו לשמירת Google החדשה. פתחו מחדש את SignWay.')}
+function legacyMigrationWritable_(){if(legacyMigrationFrozen_())throw new Error('הנתונים הועברו לשמירת Google החדשה. פתחו מחדש את Sign Away.')}
 function legacyGoogleOwner_(token){
  if(typeof token!=='string'||token.length<20||token.length>8192)throw new Error('Google authorization required');
  const r=UrlFetchApp.fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+token},muteHttpExceptions:true,followRedirects:false});
@@ -43,4 +43,4 @@ function doPost(e){
   return ContentService.createTextOutput(JSON.stringify({ok:true,data:result})).setMimeType(ContentService.MimeType.JSON);
  }catch(error){return ContentService.createTextOutput(JSON.stringify({ok:false,error:error.message||'Export failed'})).setMimeType(ContentService.MimeType.JSON)}
 }
-function legacyMigrationLanding_(){return HtmlService.createHtmlOutput('<meta name="referrer" content="no-referrer"><p>המסמכים הועברו לגרסה החדשה של SignWay.</p><a id="open" target="_top" href="https://roishlomo-teleprompter.github.io/Sign-PDF/">פתיחת SignWay</a><script>google.script.url.getLocation(function(loc){var token=new URLSearchParams((loc.hash||" ").replace(/^#/,"")).get("token");if(token)document.getElementById("open").href="https://roishlomo-teleprompter.github.io/Sign-PDF/?sign="+encodeURIComponent(token)});</script>')}
+function legacyMigrationLanding_(){return HtmlService.createHtmlOutput('<meta name="referrer" content="no-referrer"><p>המסמכים הועברו לגרסה החדשה של Sign Away.</p><a id="open" target="_top" href="https://roishlomo-teleprompter.github.io/Sign-PDF/">פתיחת Sign Away</a><script>google.script.url.getLocation(function(loc){var token=new URLSearchParams((loc.hash||" ").replace(/^#/,"")).get("token");if(token)document.getElementById("open").href="https://roishlomo-teleprompter.github.io/Sign-PDF/?sign="+encodeURIComponent(token)});</script>')}

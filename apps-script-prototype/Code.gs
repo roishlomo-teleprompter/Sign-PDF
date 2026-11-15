@@ -1,23 +1,23 @@
 /* Single-owner pilot. Bind to a private Google Sheet. Never publish the Sheet or folders. */
 const LIMIT_BYTES_ = 5 * 1024 * 1024;
 const HEADERS_ = ['id','token_hash','title','original_id','signed_id','created_at','expires_at','status','signed_at','signed_sha256'];
-function onOpen(){SpreadsheetApp.getUi().createMenu('SignWay').addItem('הגדרה ראשונית','setup_').addItem('העלאת מסמך ושליחה','showAdmin_').addToUi()}
+function onOpen(){SpreadsheetApp.getUi().createMenu('Sign Away').addItem('הגדרה ראשונית','setup_').addItem('העלאת מסמך ושליחה','showAdmin_').addToUi()}
 function setup_(){
  const p=PropertiesService.getScriptProperties(),sheet=SpreadsheetApp.getActiveSpreadsheet();
  if(!p.getProperty('SHEET_ID')){
-  const root=DriveApp.createFolder('SignWay');
+  const root=DriveApp.createFolder('Sign Away');
   p.setProperties({SHEET_ID:sheet.getId(),ROOT_ID:root.getId(),ORIGINALS_ID:root.createFolder('Originals').getId(),SIGNED_ID:root.createFolder('Signed').getId()});
  }
  const requests=requestSheet_();if(requests.getLastRow()===0)requests.appendRow(HEADERS_);
  for(const name of ['Contacts','Groups','Events'])if(!sheet.getSheetByName(name)){const tab=sheet.insertSheet(name);tab.appendRow(['id','name','data_json','updated_at'])}
- SpreadsheetApp.getUi().alert('ההגדרה הושלמה. פרסמו כ-Web app, הפעלה כבעל ההתקנה, גישה Anyone. לאחר מכן פתחו את תפריט SignWay.');
+ SpreadsheetApp.getUi().alert('ההגדרה הושלמה. פרסמו כ-Web app, הפעלה כבעל ההתקנה, גישה Anyone. לאחר מכן פתחו את תפריט Sign Away.');
 }
 function showAdmin_(){
  config_();const token=Utilities.getUuid()+Utilities.getUuid();CacheService.getScriptCache().put('admin:'+hash_(token),'1',1800);
  const t=HtmlService.createTemplateFromFile('Admin');t.adminToken=token;
- SpreadsheetApp.getUi().showSidebar(t.evaluate().setTitle('SignWay - העלאת PDF'));
+ SpreadsheetApp.getUi().showSidebar(t.evaluate().setTitle('Sign Away - העלאת PDF'));
 }
-function doGet(e){if(e&&e.parameter.mode==='bridge'){const channel=String(e.parameter.channel||'');if(!/^[a-f0-9]{32}$/.test(channel))throw new Error('Invalid channel');const t=HtmlService.createTemplateFromFile('Bridge');t.channel=channel;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).setTitle('SignWay Drive connection')}if(typeof legacyMigrationFrozen_==='function'&&legacyMigrationFrozen_())return legacyMigrationLanding_();return HtmlService.createHtmlOutputFromFile('Signer').setTitle('SignWay - חתימה בדרך').addMetaTag('viewport','width=device-width,initial-scale=1')}
+function doGet(e){if(e&&e.parameter.mode==='bridge'){const channel=String(e.parameter.channel||'');if(!/^[a-f0-9]{32}$/.test(channel))throw new Error('Invalid channel');const t=HtmlService.createTemplateFromFile('Bridge');t.channel=channel;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).setTitle('Sign Away Drive connection')}if(typeof legacyMigrationFrozen_==='function'&&legacyMigrationFrozen_())return legacyMigrationLanding_();return HtmlService.createHtmlOutputFromFile('Signer').setTitle('Sign Away').addMetaTag('viewport','width=device-width,initial-scale=1')}
 function ownerUpload(adminToken,name,base64){
  admin_(adminToken);const url=ScriptApp.getService().getUrl();if(!url||!/\/exec$/.test(url))throw new Error('יש לפרסם תחילה גרסת Web app.');
  const bytes=pdfBytes_(base64),title=String(name||'document.pdf').replace(/[\x00-\x1f]/g,'').slice(0,180),id=Utilities.getUuid(),token=Utilities.getUuid()+Utilities.getUuid();
@@ -45,7 +45,7 @@ function submitSignedDocument(token,base64){
 function cancelRequest(adminToken,id){admin_(adminToken);const lock=LockService.getScriptLock();lock.waitLock(30000);try{if(typeof legacyMigrationWritable_==='function')legacyMigrationWritable_();const s=requestSheet_(),rows=s.getDataRange().getValues();for(let i=1;i<rows.length;i++)if(rows[i][0]===id&&rows[i][7]==='pending'){s.getRange(i+1,8).setValue('cancelled');return true}return false}finally{lock.releaseLock()}}
 function config_(){const c=PropertiesService.getScriptProperties().getProperties();if(!c.SHEET_ID||!c.ORIGINALS_ID||!c.SIGNED_ID)throw new Error('הפיילוט עדיין לא הוגדר.');return c}
 function requestSheet_(){const c=PropertiesService.getScriptProperties().getProperties();if(!c.SHEET_ID)throw new Error('Run setup first');const ss=SpreadsheetApp.openById(c.SHEET_ID);return ss.getSheetByName('Requests')||ss.insertSheet('Requests')}
-function admin_(token){if(typeof token!=='string'||!CacheService.getScriptCache().get('admin:'+hash_(token)))throw new Error('פתחו מחדש את סרגל SignWay מתוך הגיליון הפרטי.')}
+function admin_(token){if(typeof token!=='string'||!CacheService.getScriptCache().get('admin:'+hash_(token)))throw new Error('פתחו מחדש את סרגל Sign Away מתוך הגיליון הפרטי.')}
 function findRequest_(token){if(typeof token!=='string'||!/^[a-f0-9-]{72}$/.test(token))throw new Error('הקישור אינו תקין או אינו זמין.');const digest=hash_(token),rows=requestSheet_().getDataRange().getValues();for(let i=1;i<rows.length;i++)if(rows[i][1]===digest)return {row:i+1,values:rows[i]};throw new Error('הקישור אינו תקין או אינו זמין.')}
 function pending_(r){if(r.values[7]!=='pending'||Date.parse(r.values[6])<=Date.now())throw new Error('הקישור פג תוקף או בוטל.')}
 function hash_(value){return hashBytes_(Utilities.newBlob(value).getBytes())}
