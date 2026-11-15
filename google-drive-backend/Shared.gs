@@ -17,6 +17,7 @@ function sharedOwnerDispatch(accessToken,action,payload){const ownerId=appOwner_
  if(action==='shared-create'){if(!sharedEnsureRuntime_())sharedError_('שירות ה-PDF עדיין בבדיקה. נסו שוב בעוד מספר שניות.');return sharedCreate_(ownerId,payload);}
  if(action==='shared-list'&&!personalSheets_().openById(config_().SHEET_ID).getSheetByName('SharedDocuments'))return [];
  if(action==='shared-list')return sharedSheet_().getDataRange().getValues().slice(1).filter(r=>r[0]).map(r=>sharedFind_(String(r[0])).meta).filter(m=>m.ownerId===ownerId).map(m=>sharedSummary_(m,true));
+
  const r=sharedFind_(payload.id);if(r.meta.ownerId!==ownerId)sharedError_('אין הרשאה למסמך זה.');
  if(action==='shared-download')return {title:r.meta.title,revision:r.meta.revision,base64:Utilities.base64Encode(personalDrive_().getFileById(r.meta.pdfId).getBlob().getBytes())};
  if(action==='shared-cancel'){const m=JSON.parse(JSON.stringify(r.meta));m.status='cancelled';sharedCommit_(r,m);return sharedSummary_(m,true)}
@@ -40,3 +41,21 @@ function sharedAcquireLock_(lock){lock.waitLock(30000);personalRefreshContext_()
 async function sharedSubmit_(payload){const lock=LockService.getScriptLock();await sharedAcquireLock_(lock);const created=[];let committed=false,commitAttempted=false;try{const r=sharedResolve_(payload.token),png=sharedPng_(payload.png,false),placement=sharedPlacement_(payload.placement),fingerprint=hash_(JSON.stringify({png:payload.png,placement}));if(r.person.signedAt){if(r.person.submissionId===payload.submissionId&&r.person.fingerprint===fingerprint)return {revision:r.meta.revision};sharedError_('כבר חתמת על מסמך זה.');}if(r.meta.people.some(p=>p.placement&&sharedOverlaps_(p.placement,placement)))sharedError_('כבר קיימת חתימה במיקום הזה. יש לבחור מקום פנוי.','SIGNATURE_OVERLAP');const m=JSON.parse(JSON.stringify(r.meta)),person=m.people.find(p=>p.id===r.person.id),folder=personalDrive_().getFolderById(m.folderId),image=folder.createFile(Utilities.newBlob(png,'image/png','signature-'+person.id+'.png'));created.push(image);Object.assign(person,{pngId:image.getId(),placement,signedAt:new Date().toISOString(),submissionId:payload.submissionId,fingerprint});const pdf=await sharedRender_(m),file=folder.createFile(Utilities.newBlob(pdf,'application/pdf',m.title.replace(/\.pdf$/i,'')+'-signed-v'+(m.revision+1)+'.pdf'));created.push(file);m.pdfId=file.getId();m.revision++;m.status=m.people.every(p=>p.signedAt)?'completed':'pending';commitAttempted=true;sharedCommit_(r,m);committed=true;return {revision:m.revision}}finally{if(!committed&&!commitAttempted)for(const f of created){try{f.setTrashed(true)}catch{}}lock.releaseLock()}}
 
 function sharedEnsureRuntime_(){const props=PropertiesService.getScriptProperties();if(props.getProperty('SHARED_RUNTIME_VERIFIED')==='1')return true;const cache=CacheService.getScriptCache();if(!cache.get('shared-runtime-probe')){cache.put('shared-runtime-probe','pending',30);(async()=>{try{const lib=sharedPdfLib_(),doc=await lib.PDFDocument.create();doc.addPage([100,100]);const result=await doc.save({objectsPerTick:Infinity});if(result.length<20||String.fromCharCode.apply(null,Array.from(result.slice(0,5)))!=='%PDF-')throw new Error('PDF runtime probe failed');props.setProperty('SHARED_RUNTIME_VERIFIED','1');cache.put('shared-runtime-probe','done',30)}catch(e){cache.put('shared-runtime-probe','error',30)}})()}return false}
+
+function sharedDelete_(w,documentId){
+ const id=workspaceUuid_(documentId),a=personalContext_.account,row=(w.sharedRows||[]).find(r=>r[0]===id);
+ if(row){const r=sharedFind_(id),m=r.meta;if(m.ownerId!==a.id)throw new Error('Document unavailable');
+ let targets=[];
+ if(m.folderId===a.sharedId){
+  // Imported documents share the Shared root: remove their assets, never the root.
+  const assets=meta=>[meta.originalId,meta.pdfId,...meta.people.flatMap(p=>[p.labelId,p.pngId])].filter(Boolean);
+  targets=[row[1],...assets(m)];
+  for(const f of personalDrive_().getFolderById(a.sharedId).getJsonFiles()){try{const old=JSON.parse(f.getBlob().getDataAsString());if(old.id===id&&old.ownerId===a.id){targets.push(f.getId(),...assets(old))}}catch(e){}}
+  const protectedIds=new Set(w.files.map(f=>f.fileId));
+  for(const other of w.sharedRows.slice(1).filter(v=>v[0]!==id)){const meta=sharedFind_(other[0]).meta;for(const fileId of [other[1],...assets(meta)])protectedIds.add(fileId)}
+  targets=targets.filter(fileId=>!protectedIds.has(fileId));
+ }else{if(!m.folderId||[a.rootId,a.dataId,a.originalsId,a.signedId].includes(m.folderId))throw new Error('Invalid document folder');targets=[m.folderId]}
+ w.pendingFileTrash=Array.from(new Set([...(w.pendingFileTrash||[]),...targets]));w.sharedRows=w.sharedRows.filter(r=>r[0]!==id);workspaceSave_(w)
+ }else if(workspacePurgeFiles_(w)>0)workspaceSave_(w,true);
+ return {deleted:true,cleanupPending:!!w.pendingFileTrash?.length}
+}

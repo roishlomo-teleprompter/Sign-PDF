@@ -38,6 +38,8 @@ window.GoogleDriveClient=(()=>{
   };
   window.SharedDrive={create:()=>transport,enabled:user=>!!user&&!user.is_anonymous&&!!user.id};
   const db=GoogleWorkspace.create({auth});
+  db.signwayDeleteSignedDocuments=async ids=>{const result=await transport.call('workspace-owner-call',{op:'documents-delete-signed',ids});if(result.cleanupPending){const cleanup=await db.signwayCompactStorage();if(cleanup.cleanupPending)throw new Error('Drive cleanup pending')}return result};
+  db.signwayDeleteSharedDocument=async id=>{const result=await transport.call('workspace-owner-call',{op:'shared-delete',id});if(result.cleanupPending){const cleanup=await db.signwayCompactStorage();if(cleanup.cleanupPending)throw new Error('Drive cleanup pending');result.cleanupPending=false}return result};
   db.signwayDeleteDocument=async id=>{const result=await transport.call('workspace-owner-call',{op:'document-delete',id});if(result.cleanupPending){const cleanup=await db.signwayCompactStorage();if(cleanup.cleanupPending)throw new Error('Drive cleanup pending');result.cleanupPending=false}return result};
   db.signwayCompactStorage=async()=>{let result,total=0,rounds=0;do{rounds++;result=await transport.call('workspace-owner-call',{op:'storage-compact'});total+=result.trashed||0;if(result.more)await new Promise(resolve=>setTimeout(resolve,350))}while(result.more&&total<1600&&rounds<100&&!(result.cleanupPending&&!result.filesCleaned));return {...result,trashed:total}};
   db.signwayGmailToken=async()=>{const r=await transport.call('auth-gmail-token');return r.token};

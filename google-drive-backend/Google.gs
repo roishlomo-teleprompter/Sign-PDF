@@ -116,13 +116,15 @@ function personalOwner_(w,p){var result;
  else if(p.op==='download')return workspaceDownload_(w,p.path);
  else if(p.op==='upload'){var r=w.tables.sign_requests.find(r=>r.original_path===p.path);if(!r||r.status!=='pending')throw new Error('Original upload unavailable');workspacePut_(w,p.path,p.base64);result={path:p.path}}
  else if(p.op==='remove'){if(!Array.isArray(p.paths)||p.paths.length>10)throw new Error('Invalid file list');for(var path of p.paths){if(!w.tables.sign_requests.some(r=>[r.original_path,r.signed_path].includes(path)))throw new Error('File ownership mismatch');workspaceQueueFiles_(w,[path])}result=p.paths.map(name=>({name:name}))}
+ else if(p.op==='shared-delete')return sharedDelete_(w,p.id);
+ else if(p.op==='documents-delete-signed'){if(!Array.isArray(p.ids)||p.ids.length>2000)throw new Error('Invalid documents');const ids=p.ids.map(workspaceUuid_),rows=w.tables.sign_requests.filter(r=>ids.includes(r.id)&&r.status==='signed');workspaceRemoveDocuments_(w,rows.map(r=>r.id),rows);result={deleted:rows.length}}
  else if(p.op==='document-delete'){workspaceRemoveDocuments_(w,[workspaceUuid_(p.id)]);result={deleted:true}}
  else if(p.op==='storage-compact')return workspaceCompact_(w);
  else if(p.op==='settings-get')return w.settings;
  else if(p.op==='settings-set'){var patch=p.settings||{};if(Object.keys(patch).some(k=>!['language','gmailSendConfirmed'].includes(k))||('language'in patch&&!['he','en','es','pt-BR','fr','de','ar','hi','id','ja','ko','zh-CN','ru'].includes(patch.language))||('gmailSendConfirmed'in patch&&typeof patch.gmailSendConfirmed!=='boolean'))throw new Error('Invalid settings');Object.assign(w.settings,patch);result=w.settings}
  else if(p.op==='self-save')result=workspaceSelf_(w,p);
  else throw new Error('Unsupported workspace operation');
- if(!(p.op==='query'&&p.query.operation==='select'))workspaceSave_(w);if(p.op==='document-delete')result.cleanupPending=!!w.pendingFileTrash?.length;return result;
+ if(!(p.op==='query'&&p.query.operation==='select'))workspaceSave_(w);if(['document-delete','documents-delete-signed'].includes(p.op))result.cleanupPending=!!w.pendingFileTrash?.length;return result;
 }
 
 /* Contacts is an automatically maintained, readable export. The verified workspace
