@@ -134,20 +134,24 @@ function workspaceContactsFile_(w){
  if(a.contactsFileId!==file.getId()){a.contactsFileId=file.getId();writeProp_('account:'+a.id,a)}return file.getId();
 }
 function workspaceCompact_(w){
- var a=personalContext_.account,d=personalDrive_(),contactsId=workspaceContactsFile_(w),current=d.getFileById(a.manifestId),result={trashed:0,kept:0,contactsFileId:contactsId,workspaceFileId:a.manifestId};
+ var a=personalContext_.account,d=personalDrive_(),contactsId=workspaceContactsFile_(w),current=d.getFileById(a.manifestId),result={trashed:0,kept:0,contactsFileId:contactsId,workspaceFileId:a.manifestId,more:false};
  // Verify the committed snapshot before even considering historical files.
  var live=JSON.parse(current.getBlob().getDataAsString());if(live.ownerId!==a.id||live.revision!==w.revision)throw new Error('Current workspace verification failed');
  current.setName('נתוני האפליקציה - לא למחוק.json');
+ var completedImport=a.importComplete&&a.importComplete===w.googleImportDigest?a.importComplete:null;
+ if(completedImport&&a.importStageId){try{var stage=JSON.parse(d.getFileById(a.importStageId).getBlob().getDataAsString());if(stage.digest!==completedImport||stage.status!=='complete'||!stage.snapshot||String(stage.snapshot.email).toLowerCase()!==a.email.toLowerCase()||hash_(JSON.stringify(stage.snapshot))!==completedImport)completedImport=null;else{delete a.importStageId;writeProp_('account:'+a.id,a)}}catch(e){completedImport=null}}
+
  for(var file of d.getFolderById(a.dataId).getJsonFiles()){
-  if(result.trashed>=150)break;
+  if(result.trashed>=8)break;
+  if(completedImport&&/^import-[a-f0-9-]+\.json$/.test(file.getName())){try{var checkpoint=JSON.parse(file.getBlob().getDataAsString());if(checkpoint.digest===completedImport&&checkpoint.snapshot&&String(checkpoint.snapshot.email).toLowerCase()===a.email.toLowerCase()&&hash_(JSON.stringify(checkpoint.snapshot))===completedImport){file.setTrashed();result.trashed++;continue}}catch(e){result.kept++}}
   if(file.getId()===a.manifestId||file.getId()===contactsId||!(/^(?:workspace-[a-f0-9-]+\.json|נתוני האפליקציה - לא למחוק\.json)$/.test(file.getName())))continue;
   try{var old=JSON.parse(file.getBlob().getDataAsString());if(old.ownerId===a.id&&Number.isInteger(old.revision)&&old.revision<=w.revision&&old.tables&&WORKSPACE_TABLES_.every(t=>Array.isArray(old.tables[t]))){file.setTrashed();result.trashed++}else result.kept++}catch(e){result.kept++}
  }
  var protectedIds=new Set((w.sharedRows||[]).slice(1).map(row=>row[1])),documents=new Map(),folders=new Set();
- for(var row of (w.sharedRows||[]).slice(1)){try{var m=JSON.parse(d.getFileById(row[1]).getBlob().getDataAsString());if(m.id===row[0]&&m.ownerId===a.id&&m.folderId){documents.set(m.id,m);folders.add(m.folderId)}}catch(e){result.kept++}}
+ for(var row of (w.sharedRows||[]).slice(1)){try{var m=JSON.parse(d.getFileById(row[1]).getBlob().getDataAsString());if(m.id===row[0]&&m.ownerId===a.id&&m.folderId){documents.set(m.id,m);folders.add(m.folderId);d.getFileById(row[1]).setName('נתוני חתימה משותפת - לא למחוק - '+m.id+'.json')}}catch(e){result.kept++}}
  for(var folderId of folders)for(var file of d.getFolderById(folderId).getJsonFiles()){
-  if(result.trashed>=150)break;if(protectedIds.has(file.getId())||!(/^(?:revision-[0-9]+-[a-f0-9-]+|import-shared-[a-f0-9-]+)\.json$/.test(file.getName())))continue;
+  if(result.trashed>=8)break;if(protectedIds.has(file.getId())||!(/^(?:revision-[0-9]+-[a-f0-9-]+|import-shared-[a-f0-9-]+)\.json$/.test(file.getName())))continue;
   try{var old=JSON.parse(file.getBlob().getDataAsString()),active=documents.get(old.id);if(active&&old.ownerId===a.id&&Number.isInteger(old.revision)&&old.revision<=active.revision&&Array.isArray(old.people)){file.setTrashed();result.trashed++}else result.kept++}catch(e){result.kept++}
  }
- return result;
+ result.more=result.trashed>=8;return result;
 }
