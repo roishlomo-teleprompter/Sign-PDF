@@ -9,6 +9,7 @@ async function boot(mode,search='',race=false,finishAnimation=true){
  w.console.error=()=>{};w.HTMLCanvasElement.prototype.getContext=()=>({});
  const nativeSetTimeout=w.setTimeout.bind(w);
  w.setTimeout=(fn,ms)=>nativeSetTimeout(fn,ms>=12000?10:ms);
+ const holds=[];const timeout=w.setTimeout;w.setTimeout=(fn,ms)=>ms===2000?(holds.push(fn),holds.length):timeout(fn,ms);
  const calls={anonymous:0,filters:[],mounts:0};
  const user={id:'existing-device',email:mode==='owner'?'test@example.com':undefined,is_anonymous:mode!=='owner'};
  const session=['owner','anonymous'].includes(mode)?{user}:null;
@@ -16,8 +17,8 @@ async function boot(mode,search='',race=false,finishAnimation=true){
  w.GoogleDriveClient=mode==='missing'?undefined:{create:()=>db};w.pdfjsLib={GlobalWorkerOptions:{}};w.PDFLib={};
  if(race)w.SignEvents={mount(){calls.mounts++;return {remove(){},render(){}}}};
  w.eval(fs.readFileSync('google-account.js','utf8'));w.eval(fs.readFileSync('design-ui.js','utf8'));w.localStorage.setItem('signway-language','he');scripts.forEach(s=>w.eval(s));await new Promise(r=>setTimeout(r,35));
- if(finishAnimation)w.document.querySelector('#startupCard animateMotion')?.dispatchEvent(new w.Event('endEvent'));
- return {w,dom,calls,visible:id=>!w.document.getElementById(id).classList.contains('hidden')};
+ if(finishAnimation){w.document.querySelector('#startupCard animateMotion')?.dispatchEvent(new w.Event('endEvent'));holds.splice(0).forEach(fn=>fn())}
+ return {w,dom,calls,holds,visible:id=>!w.document.getElementById(id).classList.contains('hidden')};
 }
 for(const mode of ['guest','owner','anonymous','expired','missing','stalled','rejected','auth-error','anonymous-failure'])test('startup: '+mode,async()=>{
  const b=await boot(mode);try{
@@ -36,4 +37,4 @@ test('overlapping sign-in event and initial session do not remount the same acco
 
 test('completed signing link displays success without requesting PDF access or re-signing',async()=>{const b=await boot('completed','?sign=completed-test');try{assert.match(b.w.document.getElementById('status').textContent,/כבר נחתם/);assert(!b.w.document.getElementById('status').classList.contains('error'));assert(b.visible('signerCard'));assert(!b.visible('pdfViewerOverlay'))}finally{b.dom.window.close()}});
 
-test('startup waits for the complete signature before revealing the prepared app',async()=>{const b=await boot('owner','',false,false);try{assert(b.visible('startupCard'));assert(b.w.document.body.classList.contains('startup-pending'));const motion=b.w.document.querySelector('#startupCard animateMotion');assert.equal(motion.getAttribute('repeatCount'),'1');assert.equal(b.w.document.querySelectorAll('#startupCard svg rect').length,0);motion.dispatchEvent(new b.w.Event('endEvent'));assert(!b.visible('startupCard'));assert(!b.w.document.body.classList.contains('startup-pending'));assert(b.visible('appContent'))}finally{b.dom.window.close()}});
+test('startup waits for the complete signature before revealing the prepared app',async()=>{const b=await boot('owner','',false,false);try{assert(b.visible('startupCard'));assert(b.w.document.body.classList.contains('startup-pending'));const motion=b.w.document.querySelector('#startupCard animateMotion');assert.equal(motion.getAttribute('repeatCount'),'1');assert.equal(b.w.document.querySelectorAll('#startupCard svg rect').length,0);motion.dispatchEvent(new b.w.Event('endEvent'));assert(b.visible('startupCard'));assert(b.w.document.body.classList.contains('startup-pending'));assert.equal(b.holds.length,1);motion.dispatchEvent(new b.w.Event('endEvent'));assert.equal(b.holds.length,1);b.holds[0]();assert(!b.visible('startupCard'));assert(!b.w.document.body.classList.contains('startup-pending'));assert(b.visible('appContent'))}finally{b.dom.window.close()}});
