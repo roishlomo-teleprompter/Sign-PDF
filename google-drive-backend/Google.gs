@@ -82,7 +82,7 @@ function personalBootstrap_(){
 function workspaceLoad_(){if(personalContext_.workspace)return personalContext_.workspace;var a=personalContext_.account;if(!a.manifestId)throw new Error('Connect personal Drive first');var w=JSON.parse(personalDrive_().getFileById(a.manifestId).getBlob().getDataAsString());if(w.ownerId!==a.id)throw new Error('Workspace ownership mismatch');personalContext_.workspace=w;return w}
 function workspaceSave_(w,skipPurge){
  var a=personalContext_.account;if(w.ownerId!==a.id)throw new Error('Workspace ownership mismatch');w.revision=(w.revision||0)+1;
- var text=JSON.stringify(w),f=personalDrive_().getFolderById(w.folderId).createFile(Utilities.newBlob(text,'application/json','נתוני האפליקציה - לא למחוק.json'));
+ var text=JSON.stringify(w),f=personalDrive_().getFolderById(w.folderId).createFile(Utilities.newBlob(text,'application/json','App Data - Do Not Delete.json'));
  if(hash_(f.getBlob().getDataAsString())!==hash_(text))throw new Error('Drive verification failed');
  // Publish link routing first. An unpublished manifest never exposes data: resolve checks current state.
  for(var r of w.tables.sign_requests)writeProp_('route:'+r.token_hash,{id:a.id});
@@ -130,8 +130,8 @@ function personalOwner_(w,p){var result;
 function workspaceContactsFile_(w){
  var a=personalContext_.account,groups=w.tables.signature_groups,people=new Map();
  for(var group of groups)for(var person of group.members||[]){var key=String(person.email||person.name).trim().toLowerCase();if(!people.has(key))people.set(key,{name:person.name,email:person.email||'',groups:[]});people.get(key).groups.push(group.name)}
- var text=JSON.stringify({description:'רשימת אנשי קשר - מתעדכן אוטומטית. אין למחוק. הנתונים מנוהלים מתוך האפליקציה.',ownerId:a.id,workspaceRevision:w.revision,contacts:Array.from(people.values()),groups:groups},null,2),file;
- if(a.contactsFileId){file=personalDrive_().getFileById(a.contactsFileId);if(file.getBlob().getDataAsString()===text)return file.getId();file.setText(text)}else{file=personalDrive_().getFolderById(a.dataId).createFile(Utilities.newBlob(text,'application/json','רשימת אנשי קשר - לא למחוק.json'))}
+ var text=JSON.stringify({description:'Contacts - updated automatically. Do not delete. Manage this data in the app.',ownerId:a.id,workspaceRevision:w.revision,contacts:Array.from(people.values()),groups:groups},null,2),file;
+ if(a.contactsFileId){file=personalDrive_().getFileById(a.contactsFileId);if(file.getName()!=='Contacts - Do Not Delete.json')file.setName('Contacts - Do Not Delete.json');if(file.getBlob().getDataAsString()===text)return file.getId();file.setText(text)}else{file=personalDrive_().getFolderById(a.dataId).createFile(Utilities.newBlob(text,'application/json','Contacts - Do Not Delete.json'))}
  if(hash_(file.getBlob().getDataAsString())!==hash_(text))throw new Error('Contacts export verification failed');
  if(a.contactsFileId!==file.getId()){a.contactsFileId=file.getId();writeProp_('account:'+a.id,a)}return file.getId();
 }
@@ -140,14 +140,14 @@ function workspaceCompact_(w){
  var a=personalContext_.account,d=personalDrive_(),contactsId=workspaceContactsFile_(w),current=d.getFileById(a.manifestId),result={trashed:0,kept:0,contactsFileId:contactsId,workspaceFileId:a.manifestId,more:!!w.pendingFileTrash?.length,cleanupPending:!!w.pendingFileTrash?.length,filesCleaned:filesCleaned};
  // Verify the committed snapshot before even considering historical files.
  var live=JSON.parse(current.getBlob().getDataAsString());if(live.ownerId!==a.id||live.revision!==w.revision)throw new Error('Current workspace verification failed');
- if(current.getName()!=='נתוני האפליקציה - לא למחוק.json')current.setName('נתוני האפליקציה - לא למחוק.json');
+ if(current.getName()!=='App Data - Do Not Delete.json')current.setName('App Data - Do Not Delete.json');
  var completedImport=a.importComplete&&a.importComplete===w.googleImportDigest?a.importComplete:null;
  if(completedImport&&a.importStageId){try{var stage=JSON.parse(d.getFileById(a.importStageId).getBlob().getDataAsString());if(stage.digest!==completedImport||stage.status!=='complete'||!stage.snapshot||String(stage.snapshot.email).toLowerCase()!==a.email.toLowerCase()||hash_(JSON.stringify(stage.snapshot))!==completedImport)completedImport=null;else{delete a.importStageId;writeProp_('account:'+a.id,a)}}catch(e){completedImport=null}}
 
  for(var file of d.getFolderById(a.dataId).getJsonFiles()){
   if(result.trashed>=3)break;
   if(completedImport&&/^import-[a-f0-9-]+\.json$/.test(file.getName())){try{var checkpoint=JSON.parse(file.getBlob().getDataAsString());if(checkpoint.digest===completedImport&&checkpoint.snapshot&&String(checkpoint.snapshot.email).toLowerCase()===a.email.toLowerCase()&&hash_(JSON.stringify(checkpoint.snapshot))===completedImport){file.setTrashed();result.trashed++;continue}}catch(e){result.kept++}}
-  if(file.getId()===a.manifestId||file.getId()===contactsId||!(/^(?:workspace-[a-f0-9-]+\.json|נתוני האפליקציה - לא למחוק\.json)$/.test(file.getName())))continue;
+  if(file.getId()===a.manifestId||file.getId()===contactsId||!(/^(?:workspace-[a-f0-9-]+\.json|נתוני האפליקציה - לא למחוק\.json|App Data - Do Not Delete\.json)$/.test(file.getName())))continue;
   try{var old=JSON.parse(file.getBlob().getDataAsString());if(old.ownerId===a.id&&Number.isInteger(old.revision)&&old.revision<=w.revision&&old.tables&&WORKSPACE_TABLES_.every(t=>Array.isArray(old.tables[t]))){file.setTrashed();result.trashed++}else result.kept++}catch(e){result.kept++}
  }
  if(result.trashed>=3){result.more=true;return result}
