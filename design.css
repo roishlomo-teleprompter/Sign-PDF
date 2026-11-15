@@ -264,3 +264,5 @@ body.startup-pending{overflow:hidden}body.startup-pending #appContent,body.start
 /* The empty upload screen reserves its available space for the upload circle. */
 body[data-screen=upload][data-flow=choose] .upload-row:has(>.upload-actions.hidden){grid-template-rows:minmax(0,1fr) auto}
 body[data-screen=upload][data-flow=choose] .upload-row:has(>.upload-actions.hidden) .upload{height:min(380px,calc(100vw - 88px),calc(100% - 56px))}
+
+body[data-screen=upload] .upload-row .upload #uploadCancelHint{color:#000;font-weight:700;white-space:pre-line;max-width:100%;font-size:13px;line-height:1.4}
