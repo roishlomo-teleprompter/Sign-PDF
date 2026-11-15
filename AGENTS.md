@@ -6,3 +6,5 @@
 - Keep both Hebrew and Arabic right-to-left; use the selected locale for dates. Keep the SignWay brand unchanged.
 - Preserve Google-only identity and personal Drive storage.
 - Run `npm test` and build into a new empty destination before publishing. Production deployment regenerates the catalog and the service-worker cache revision automatically.
+
+- The language-download prompt in `i18n.js` is intentionally bundled in every supported language: it must work before that language catalog exists. Preserve this bootstrap copy when adding languages.
