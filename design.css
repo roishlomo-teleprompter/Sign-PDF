@@ -404,3 +404,13 @@ body.upload-pending .upload[aria-busy=true]::after{box-sizing:border-box}
 .shared-tracking .tracking-secondary button>span{font-size:22px;line-height:1}.shared-tracking .tracking-secondary .tracking-cancel{border-color:#e4a2ac;color:#b34355;background:#fffafb}
 .shared-tracking .tracking-privacy{font-size:11px;line-height:1.6;color:#7a879d;text-align:center;margin:13px 0 0}.shared-tracking .shared-error:empty{display:none}
 @media(max-width:380px){#sharedOwnerPanel.shared-tracking{padding:14px}.shared-tracking .shared-person{padding:10px 8px;gap:7px}.shared-tracking .shared-person-tools{gap:2px;padding-inline-start:6px}.shared-tracking .shared-person-tools button{width:29px;min-width:29px;padding:5px}.shared-tracking .tracking-status{font-size:10px}.shared-tracking .tracking-secondary button{font-size:12px}}
+
+/* Two-line document heading, isolated from the application's generic header styles. */
+.shared-tracking .tracking-heading{display:flex;align-items:center;gap:11px;background:transparent;padding:0;margin:0;border:0;box-shadow:none;min-height:0;text-align:start}
+.shared-tracking .tracking-heading-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:42px;border:1px solid #dbe6fb;border-radius:12px;background:#fff;color:#2455f5}
+.shared-tracking .tracking-heading-icon svg{width:23px;height:23px}
+.shared-tracking .tracking-heading-copy{min-width:0;flex:1}
+.shared-tracking .tracking-heading-copy p{font-size:12px;line-height:1.4;font-weight:500;color:#73839f;margin:0 0 3px}
+.shared-tracking .tracking-heading-copy h2{font-size:18px;line-height:1.4;font-weight:700;color:#19365f;margin:0;text-align:start;overflow-wrap:anywhere}
+.shared-tracking .tracking-document{padding:13px 15px;border-radius:16px}
+.shared-tracking .tracking-document .shared-progress{margin-top:12px;padding:9px 11px}
