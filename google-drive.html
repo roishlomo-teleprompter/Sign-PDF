@@ -258,6 +258,7 @@
 
     $('createLinkBtn').onclick=async()=>{
       if(!selectedUpload)return;
+      const shell=document.querySelector('.app-shell'),row=document.querySelector('.upload-row'),circle=document.querySelector('.upload-circle');for(const [key,element]of [['shell',shell],['row',row],['circle',circle]])document.body.style.setProperty('--upload-loading-'+key,element.getBoundingClientRect().height+'px');document.body.classList.add('upload-pending');
       setFlow('link');clearSignedOutput();signatureData=null;pdfDoc=null;signingRequest=null;const button=$('createLinkBtn');button.disabled=true;button.textContent=tr('מעלה את המסמך...','Uploading document...');$('uploadCard').classList.add('loading');dropZone.setAttribute('aria-busy','true');refreshUploadLabel();
       let request=null;const uploadFile=selectedUpload;$('uploadError').textContent='';
       try{
@@ -272,7 +273,7 @@
         console.error('PDF link creation failed',error);
         if(request?.request_id){try{await db.from('sign_requests').delete().eq('id',request.request_id)}catch(cleanupError){console.error('Request cleanup failed',cleanupError)}}
         setFlow('choose');$('uploadError').textContent=PdfTransfer.message(error,tr);
-      }finally{$('uploadCard').classList.remove('loading');dropZone.removeAttribute('aria-busy');refreshUploadLabel();actionButton('createLinkBtn','send',tr('שליחה לחתימה','Send for signature'));button.disabled=!selectedUpload}
+      }finally{document.body.classList.remove('upload-pending');$('uploadCard').classList.remove('loading');dropZone.removeAttribute('aria-busy');refreshUploadLabel();actionButton('createLinkBtn','send',tr('שליחה לחתימה','Send for signature'));button.disabled=!selectedUpload}
     };
     $('emailLinkBtn').onclick=()=>GmailMail.compose({db,ownerId,tr,subject:tr('מסמך לחתימה','Document to sign'),body:tr('שלום, מצורף קישור למסמך לחתימה:','Hello, please sign the document using this link:')+'\n'+$('signingLink').value}).catch(e=>{$('uploadError').textContent=e.message});
     $('whatsappLinkBtn').onclick=()=>{const url=$('signingLink').value;if(url)window.open('https://wa.me/?text='+encodeURIComponent(tr('שלום, מצורף מסמך לחתימה:','Hello, please sign this document:')+'\n'+url),'_blank','noopener')};

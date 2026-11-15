@@ -280,3 +280,15 @@ body.startup-pending .topbar{height:var(--startup-header-height)!important;min-h
 body.startup-pending #startupCard.signature-startup{top:var(--startup-top);bottom:auto;height:var(--startup-height);min-height:var(--startup-height);max-height:var(--startup-height);box-sizing:border-box;transition:none}
 #startupCard .startup-art{flex:0 0 auto}
 #startupCard .startup-signature-scene{display:block;aspect-ratio:460/240;flex-shrink:0}
+
+/* Only spinner layers move: preserve the selected-file layout throughout the upload. */
+body.upload-pending{overflow:hidden}
+body[data-screen=upload].upload-pending .app-shell{height:var(--upload-loading-shell)!important;min-height:0}
+body[data-screen=upload].upload-pending .upload-row{height:var(--upload-loading-row);flex:0 0 var(--upload-loading-row)}
+body[data-screen=upload].upload-pending .upload-circle{height:var(--upload-loading-circle)!important;width:var(--upload-loading-circle)!important;aspect-ratio:1}
+body[data-screen=upload][data-flow=link].upload-pending .upload-actions{display:grid!important;visibility:hidden;pointer-events:none}
+body[data-screen=upload][data-flow=link].upload-pending .intro{display:flex!important}
+body.upload-pending .link-result{display:none!important}
+body[data-screen=upload].upload-pending .upload-row .upload{transform:none!important;transition:none!important;animation:none!important}
+body.upload-pending .upload[aria-busy=true]::after,body.upload-pending .upload[aria-busy=true] .upload-symbol svg{transform-origin:50% 50%;will-change:transform}
+body.upload-pending .upload[aria-busy=true]::after{box-sizing:border-box}
