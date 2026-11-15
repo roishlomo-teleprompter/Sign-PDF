@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const {JSDOM}=require('jsdom');
 const html=fs.readFileSync('index.html','utf8');
 const scripts=[...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
-async function boot(mode,search='',race=false){
+async function boot(mode,search='',race=false,finishAnimation=true){
  const dom=new JSDOM(html,{url:'https://example.com/Sign-PDF/'+search,runScripts:'outside-only'}),w=dom.window;
  w.console.error=()=>{};w.HTMLCanvasElement.prototype.getContext=()=>({});
  const nativeSetTimeout=w.setTimeout.bind(w);
@@ -16,6 +16,7 @@ async function boot(mode,search='',race=false){
  w.GoogleDriveClient=mode==='missing'?undefined:{create:()=>db};w.pdfjsLib={GlobalWorkerOptions:{}};w.PDFLib={};
  if(race)w.SignEvents={mount(){calls.mounts++;return {remove(){},render(){}}}};
  w.eval(fs.readFileSync('google-account.js','utf8'));w.eval(fs.readFileSync('design-ui.js','utf8'));w.localStorage.setItem('signway-language','he');scripts.forEach(s=>w.eval(s));await new Promise(r=>setTimeout(r,35));
+ if(finishAnimation)w.document.querySelector('#startupCard animateMotion')?.dispatchEvent(new w.Event('endEvent'));
  return {w,dom,calls,visible:id=>!w.document.getElementById(id).classList.contains('hidden')};
 }
 for(const mode of ['guest','owner','anonymous','expired','missing','stalled','rejected','auth-error','anonymous-failure'])test('startup: '+mode,async()=>{
@@ -34,3 +35,5 @@ test('language switch after direct entry remains usable',async()=>{const b=await
 test('overlapping sign-in event and initial session do not remount the same account dashboard',async()=>{const b=await boot('owner','',true);try{assert.equal(b.calls.mounts,1);assert(b.visible('appContent'))}finally{b.dom.window.close()}});
 
 test('completed signing link displays success without requesting PDF access or re-signing',async()=>{const b=await boot('completed','?sign=completed-test');try{assert.match(b.w.document.getElementById('status').textContent,/כבר נחתם/);assert(!b.w.document.getElementById('status').classList.contains('error'));assert(b.visible('signerCard'));assert(!b.visible('pdfViewerOverlay'))}finally{b.dom.window.close()}});
+
+test('startup waits for the complete signature before revealing the prepared app',async()=>{const b=await boot('owner','',false,false);try{assert(b.visible('startupCard'));assert(b.w.document.body.classList.contains('startup-pending'));const motion=b.w.document.querySelector('#startupCard animateMotion');assert.equal(motion.getAttribute('repeatCount'),'1');assert.equal(b.w.document.querySelectorAll('#startupCard svg rect').length,0);motion.dispatchEvent(new b.w.Event('endEvent'));assert(!b.visible('startupCard'));assert(!b.w.document.body.classList.contains('startup-pending'));assert(b.visible('appContent'))}finally{b.dom.window.close()}});
