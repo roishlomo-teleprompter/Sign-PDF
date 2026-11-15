@@ -4,7 +4,18 @@ window.GmailMail=(()=>{
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function email(v){return typeof v==='string'&&v.length<=254&&/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(v)}
  function b64(s){return btoa(unescape(encodeURIComponent(s)))}
- function mime({from,to,subject,body}){if(!email(from)||!email(to)||/[\r\n]/.test(subject)||!subject.trim()||subject.length>200||body.length>12000)throw new Error('INVALID_MESSAGE');const encoded=b64(body).match(/.{1,76}/g)?.join('\r\n')||'';const title=(subject.match(/.{1,10}/gu)||[]).map(s=>'=?UTF-8?B?'+b64(s)+'?=').join('\r\n ');return b64(`From: ${from}\r\nTo: ${to}\r\nSubject: ${title}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded}\r\n`).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+ function mime({from,to,subject,body}){
+  if(!email(from)||!email(to)||/[\r\n]/.test(subject)||!subject.trim()||subject.length>200||body.length>12000)throw new Error('INVALID_MESSAGE');
+  const encode=value=>b64(value).match(/.{1,76}/g)?.join('\r\n')||'',title=(subject.match(/.{1,10}/gu)||[]).map(s=>'=?UTF-8?B?'+b64(s)+'?=').join('\r\n '),lang=document.documentElement.lang.toLowerCase().split('-')[0],rtl=['he','iw','ar'].includes(lang);
+  let content='Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+encode(body)+'\r\n';
+  if(rtl){
+   const boundary='signaway_'+crypto.randomUUID(),htmlBody=body.split(/(https?:\/\/[^\s<>"']+)/g).map(part=>/^https?:\/\//.test(part)?'<a dir="ltr" href="'+esc(part)+'" style="direction:ltr;unicode-bidi:isolate;overflow-wrap:anywhere">'+esc(part)+'</a>':esc(part)).join('').replace(/\r?\n/g,'<br>');
+   const html='<!doctype html><html lang="'+(lang==='ar'?'ar':'he')+'" dir="rtl"><body dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif"><div dir="rtl" style="direction:rtl;text-align:right;line-height:1.7;overflow-wrap:anywhere">'+htmlBody+'</div></body></html>';
+   content='Content-Type: multipart/alternative; boundary="'+boundary+'"\r\n\r\n--'+boundary+'\r\n'+content+'\r\n--'+boundary+'\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+encode(html)+'\r\n--'+boundary+'--\r\n';
+  }
+  return b64('From: '+from+'\r\nTo: '+to+'\r\nSubject: '+title+'\r\nMIME-Version: 1.0\r\n'+content).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ }
+
  function close(){finishApproval?.(false);if(current){current.close();current.remove();current=null}}
  function confirmSend({from,to,subject,tr}){return new Promise(resolve=>{
   const dialog=document.createElement('dialog');approval=dialog;dialog.className='ev-dialog mail-dialog mail-confirm';dialog.setAttribute('aria-labelledby','mailConfirmTitle');
