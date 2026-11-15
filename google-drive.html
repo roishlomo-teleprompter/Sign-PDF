@@ -91,6 +91,13 @@
   <dialog id="confirmDialog" class="confirm-dialog"><div class="modal"><div class="confirm-icon" aria-hidden="true">!</div><h2 id="confirmTitle"></h2><p id="confirmMessage"></p><div class="modal-actions"><button class="confirm-yes" id="confirmYes" type="button"></button><button class="confirm-no" id="confirmNo" type="button"></button></div></div></dialog>
   <script>
     let startupComplete=false,startupAnimationFinished=false,startupAnimationTimer,startupHoldTimer;
+    const startupCard=document.getElementById('startupCard'),startupHeader=document.querySelector('.topbar'),startupShell=document.querySelector('.app-shell');
+    const startupTop=startupCard.getBoundingClientRect().top;
+    document.body.style.setProperty('--startup-height',Math.max(0,window.innerHeight-startupTop)+'px');
+    document.body.style.setProperty('--startup-top',startupTop+'px');
+    document.body.style.setProperty('--startup-header-height',startupHeader.getBoundingClientRect().height+'px');
+    document.body.style.setProperty('--startup-shell-width',startupShell.getBoundingClientRect().width+'px');
+    document.body.style.setProperty('--startup-shell-padding',getComputedStyle(startupShell).paddingTop);
     document.body.classList.add('startup-pending');
     function revealStartup(){if(!startupComplete||!startupAnimationFinished)return;document.getElementById('startupCard').classList.add('hidden');document.body.classList.remove('startup-pending')}
     function finishStartupAnimation(){if(startupAnimationFinished||startupHoldTimer)return;clearTimeout(startupAnimationTimer);document.getElementById('startupCard').classList.add('signature-complete');const complete=()=>{startupAnimationFinished=true;revealStartup()};if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)complete();else startupHoldTimer=setTimeout(complete,2000)}

@@ -273,3 +273,10 @@ body[data-screen=upload][data-flow=choose] .upload-row:has(>.upload-actions.hidd
 body[data-screen=upload] .upload-circle .cancel-upload-control{position:absolute;inset-block-start:4px;inset-inline-end:4px;z-index:2;display:flex;align-items:center;gap:5px;min-height:44px;padding:6px 10px;background:#fff;color:#171c30;border:1px solid #d5e2dc;border-radius:22px;box-shadow:0 3px 12px #123d3226;font-size:13px;font-weight:700;line-height:1.2;cursor:pointer}
 .cancel-upload-control>span[aria-hidden]{font-size:19px}
 @media(max-height:650px){body[data-screen=upload] .upload-circle{height:min(260px,calc(100vw - 100px),calc(100% - 44px))}}
+
+/* Freeze intro geometry while account detection prepares a different screen underneath. */
+body.startup-pending .app-shell{width:var(--startup-shell-width)!important;padding-top:var(--startup-shell-padding)!important}
+body.startup-pending .topbar{height:var(--startup-header-height)!important;min-height:var(--startup-header-height)!important;flex-shrink:0}
+body.startup-pending #startupCard.signature-startup{top:var(--startup-top);bottom:auto;height:var(--startup-height);min-height:var(--startup-height);max-height:var(--startup-height);box-sizing:border-box;transition:none}
+#startupCard .startup-art{flex:0 0 auto}
+#startupCard .startup-signature-scene{display:block;aspect-ratio:460/240;flex-shrink:0}
