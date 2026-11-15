@@ -80,7 +80,7 @@ function personalBootstrap_(){
  var w={version:2,ownerId:a.id,folderId:a.dataId,tables:{sign_requests:[],signature_groups:[],signature_events:[],event_participants:[]},settings:{language:'he',gmailSendConfirmed:false},files:[],sharedRows:[],revision:0};workspaceSave_(w);return w;
 }
 function workspaceLoad_(){if(personalContext_.workspace)return personalContext_.workspace;var a=personalContext_.account;if(!a.manifestId)throw new Error('Connect personal Drive first');var w=JSON.parse(personalDrive_().getFileById(a.manifestId).getBlob().getDataAsString());if(w.ownerId!==a.id)throw new Error('Workspace ownership mismatch');personalContext_.workspace=w;return w}
-function workspaceSave_(w,skipPurge){
+function workspaceSave_(w,skipPurge,skipContacts,purgeLimit){
  var a=personalContext_.account;if(w.ownerId!==a.id)throw new Error('Workspace ownership mismatch');w.revision=(w.revision||0)+1;
  var text=JSON.stringify(w),f=personalDrive_().getFolderById(w.folderId).createFile(Utilities.newBlob(text,'application/json','App Data - Do Not Delete.json'));
  if(hash_(f.getBlob().getDataAsString())!==hash_(text))throw new Error('Drive verification failed');
@@ -88,8 +88,8 @@ function workspaceSave_(w,skipPurge){
  for(var r of w.tables.sign_requests)writeProp_('route:'+r.token_hash,{id:a.id});
  for(var p of w.tables.event_participants)writeProp_('route:'+hash_(p.token),{id:a.id});
  var previous=a.manifestId;var next=Object.assign({},a,{manifestId:f.getId()});writeProp_('account:'+a.id,next);personalContext_.account=next;personalContext_.workspace=w;
- try{workspaceContactsFile_(w);if(previous&&previous!==f.getId())personalDrive_().getFileById(previous).setTrashed()}catch(e){console.warn('Drive housekeeping deferred: '+e.message)}
- if(!skipPurge&&workspacePurgeFiles_(w)>0)workspaceSave_(w,true);
+ try{if(!skipContacts)workspaceContactsFile_(w);if(previous&&previous!==f.getId())personalDrive_().getFileById(previous).setTrashed()}catch(e){console.warn('Drive housekeeping deferred: '+e.message)}
+ if(!skipPurge&&workspacePurgeFiles_(w,purgeLimit)>0)workspaceSave_(w,true,skipContacts);
 }
 function routeContext_(token){if(typeof token!=='string'||token.length>200)throw new Error('Invalid signing link');var route=readProp_('route:'+hash_(token));if(!route)throw new Error('Signing link unavailable');setContext_(route.id);return workspaceLoad_()}
 function googleDispatch(session,action,p){
@@ -117,6 +117,8 @@ function personalOwner_(w,p){var result;
  else if(p.op==='upload'){var r=w.tables.sign_requests.find(r=>r.original_path===p.path);if(!r||r.status!=='pending')throw new Error('Original upload unavailable');workspacePut_(w,p.path,p.base64);result={path:p.path}}
  else if(p.op==='remove'){if(!Array.isArray(p.paths)||p.paths.length>10)throw new Error('Invalid file list');for(var path of p.paths){if(!w.tables.sign_requests.some(r=>[r.original_path,r.signed_path].includes(path)))throw new Error('File ownership mismatch');workspaceQueueFiles_(w,[path])}result=p.paths.map(name=>({name:name}))}
  else if(p.op==='shared-delete')return sharedDelete_(w,p.id);
+ else if(p.op==='shared-delete-many')return sharedDeleteMany_(w,p.ids);
+ else if(p.op==='deletion-cleanup'){const cleaned=workspacePurgeFiles_(w,8);if(cleaned>0)workspaceSave_(w,true,true);return {cleaned,cleanupPending:!!w.pendingFileTrash?.length}}
  else if(p.op==='documents-delete-signed'){if(!Array.isArray(p.ids)||p.ids.length>2000)throw new Error('Invalid documents');const ids=p.ids.map(workspaceUuid_),rows=w.tables.sign_requests.filter(r=>ids.includes(r.id)&&r.status==='signed');workspaceRemoveDocuments_(w,rows.map(r=>r.id),rows);result={deleted:rows.length}}
  else if(p.op==='document-delete'){workspaceRemoveDocuments_(w,[workspaceUuid_(p.id)]);result={deleted:true}}
  else if(p.op==='storage-compact')return workspaceCompact_(w);
@@ -124,7 +126,7 @@ function personalOwner_(w,p){var result;
  else if(p.op==='settings-set'){var patch=p.settings||{};if(Object.keys(patch).some(k=>!['language','gmailSendConfirmed'].includes(k))||('language'in patch&&!['he','en','es','pt-BR','fr','de','ar','hi','id','ja','ko','zh-CN','ru'].includes(patch.language))||('gmailSendConfirmed'in patch&&typeof patch.gmailSendConfirmed!=='boolean'))throw new Error('Invalid settings');Object.assign(w.settings,patch);result=w.settings}
  else if(p.op==='self-save')result=workspaceSelf_(w,p);
  else throw new Error('Unsupported workspace operation');
- if(!(p.op==='query'&&p.query.operation==='select'))workspaceSave_(w);if(['document-delete','documents-delete-signed'].includes(p.op))result.cleanupPending=!!w.pendingFileTrash?.length;return result;
+ if(!(p.op==='query'&&p.query.operation==='select'))workspaceSave_(w,false,['document-delete','documents-delete-signed'].includes(p.op),8);if(['document-delete','documents-delete-signed'].includes(p.op))result.cleanupPending=!!w.pendingFileTrash?.length;return result;
 }
 
 /* Contacts is an automatically maintained, readable export. The verified workspace

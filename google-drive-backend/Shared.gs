@@ -42,20 +42,20 @@ async function sharedSubmit_(payload){const lock=LockService.getScriptLock();awa
 
 function sharedEnsureRuntime_(){const props=PropertiesService.getScriptProperties();if(props.getProperty('SHARED_RUNTIME_VERIFIED')==='1')return true;const cache=CacheService.getScriptCache();if(!cache.get('shared-runtime-probe')){cache.put('shared-runtime-probe','pending',30);(async()=>{try{const lib=sharedPdfLib_(),doc=await lib.PDFDocument.create();doc.addPage([100,100]);const result=await doc.save({objectsPerTick:Infinity});if(result.length<20||String.fromCharCode.apply(null,Array.from(result.slice(0,5)))!=='%PDF-')throw new Error('PDF runtime probe failed');props.setProperty('SHARED_RUNTIME_VERIFIED','1');cache.put('shared-runtime-probe','done',30)}catch(e){cache.put('shared-runtime-probe','error',30)}})()}return false}
 
-function sharedDelete_(w,documentId){
- const id=workspaceUuid_(documentId),a=personalContext_.account,row=(w.sharedRows||[]).find(r=>r[0]===id);
- if(row){const r=sharedFind_(id),m=r.meta;if(m.ownerId!==a.id)throw new Error('Document unavailable');
- let targets=[];
- if(m.folderId===a.sharedId){
-  // Imported documents share the Shared root: remove their assets, never the root.
-  const assets=meta=>[meta.originalId,meta.pdfId,...meta.people.flatMap(p=>[p.labelId,p.pngId])].filter(Boolean);
-  targets=[row[1],...assets(m)];
-  for(const f of personalDrive_().getFolderById(a.sharedId).getJsonFiles()){try{const old=JSON.parse(f.getBlob().getDataAsString());if(old.id===id&&old.ownerId===a.id){targets.push(f.getId(),...assets(old))}}catch(e){}}
-  const protectedIds=new Set(w.files.map(f=>f.fileId));
-  for(const other of w.sharedRows.slice(1).filter(v=>v[0]!==id)){const meta=sharedFind_(other[0]).meta;for(const fileId of [other[1],...assets(meta)])protectedIds.add(fileId)}
-  targets=targets.filter(fileId=>!protectedIds.has(fileId));
- }else{if(!m.folderId||[a.rootId,a.dataId,a.originalsId,a.signedId].includes(m.folderId))throw new Error('Invalid document folder');targets=[m.folderId]}
- w.pendingFileTrash=Array.from(new Set([...(w.pendingFileTrash||[]),...targets]));w.sharedRows=w.sharedRows.filter(r=>r[0]!==id);workspaceSave_(w)
- }else if(workspacePurgeFiles_(w)>0)workspaceSave_(w,true);
- return {deleted:true,cleanupPending:!!w.pendingFileTrash?.length}
+function sharedDelete_(w,documentId){const result=sharedDeleteMany_(w,[documentId]);result.deleted=true;return result}
+function sharedDeleteMany_(w,documentIds){
+ if(!Array.isArray(documentIds)||documentIds.length>2000)throw new Error('Invalid documents');
+ const ids=new Set(documentIds.map(workspaceUuid_)),a=personalContext_.account,rows=(w.sharedRows||[]).slice(1),selected=rows.filter(r=>ids.has(r[0]));
+ if(!selected.length){const cleaned=workspacePurgeFiles_(w);if(cleaned)workspaceSave_(w,true,true);return {deleted:0,cleanupPending:!!w.pendingFileTrash?.length}}
+ const assets=m=>[m.originalId,m.pdfId,...m.people.flatMap(p=>[p.labelId,p.pngId])].filter(Boolean),metas=new Map(),targets=[];
+ for(const row of selected){const m=JSON.parse(personalDrive_().getFileById(row[1]).getBlob().getDataAsString());if(m.id!==row[0]||m.ownerId!==a.id)throw new Error('Document unavailable');metas.set(m.id,m)}
+ const imported=selected.some(row=>metas.get(row[0]).folderId===a.sharedId),protectedIds=new Set(w.files.map(f=>f.fileId));
+ if(imported){for(const row of rows.filter(r=>!ids.has(r[0]))){const m=JSON.parse(personalDrive_().getFileById(row[1]).getBlob().getDataAsString());if(m.id!==row[0]||m.ownerId!==a.id)throw new Error('Document unavailable');for(const id of [row[1],...assets(m)])protectedIds.add(id)}
+  const activeIds=new Set(rows.map(r=>r[1]));
+  // Scan historical metadata at most once for the entire selection.
+  for(const f of personalDrive_().getFolderById(a.sharedId).getJsonFiles()){if(activeIds.has(f.getId()))continue;try{const old=JSON.parse(f.getBlob().getDataAsString());if(ids.has(old.id)&&old.ownerId===a.id&&Array.isArray(old.people))targets.push(f.getId(),...assets(old))}catch(e){}}
+ }
+ for(const row of selected){const m=metas.get(row[0]);if(m.folderId===a.sharedId)targets.push(row[1],...assets(m));else{if(!m.folderId||[a.rootId,a.dataId,a.originalsId,a.signedId].includes(m.folderId))throw new Error('Invalid document folder');targets.push(m.folderId)}}
+ w.pendingFileTrash=Array.from(new Set([...(w.pendingFileTrash||[]),...targets.filter(id=>!protectedIds.has(id))]));w.sharedRows=w.sharedRows.filter((r,i)=>i===0||!ids.has(r[0]));workspaceSave_(w,false,true,8);
+ return {deleted:selected.length,cleanupPending:!!w.pendingFileTrash?.length}
 }
