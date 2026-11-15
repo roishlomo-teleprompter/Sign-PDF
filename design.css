@@ -292,3 +292,27 @@ body.upload-pending .link-result{display:none!important}
 body[data-screen=upload].upload-pending .upload-row .upload{transform:none!important;transition:none!important;animation:none!important}
 body.upload-pending .upload[aria-busy=true]::after,body.upload-pending .upload[aria-busy=true] .upload-symbol svg{transform-origin:50% 50%;will-change:transform}
 body.upload-pending .upload[aria-busy=true]::after{box-sizing:border-box}
+
+/* Group request composer */
+.ev-dialog:has(.ev-event-form){padding:0;border:1px solid #dce5f5;border-radius:26px;background:#f7f9fe;box-shadow:0 24px 90px #10265330;width:min(780px,calc(100% - 24px));overflow:auto}
+.ev-dialog form.ev-event-form{padding:0 26px 20px}
+.ev-compose-header{display:flex;align-items:center;gap:18px;margin:0 -26px 22px;padding:28px 26px;background:linear-gradient(120deg,#102b63,#204fc6);color:#fff;border-bottom:1px solid #527ee0}
+.ev-compose-icon{display:grid;place-items:center;flex:0 0 58px;height:58px;border-radius:18px;background:#ffffff17;border:1px solid #ffffff35}
+.ev-compose-icon svg{width:32px;height:32px;stroke:currentColor}
+.ev-compose-header .ev-step{background:#ffffff16;color:#dbe8ff;font-size:11px;margin-bottom:9px;letter-spacing:.04em}
+.ev-compose-header h2{font-size:26px;color:#fff;margin:0 0 8px}
+.ev-compose-header p{font-size:14px;line-height:1.6;color:#d9e5ff;margin:0}
+.ev-group-explainer{border:1px solid #dce6fb;border-inline-start:4px solid #386bfa;border-radius:16px;background:#fff;padding:18px 20px;margin-bottom:24px;box-shadow:0 5px 18px #20468205}
+.ev-group-explainer h3{font-size:16px;color:#163a80;margin:0 0 8px}
+.ev-group-explainer p{font-size:14px;line-height:1.8;color:#465b7b;margin:0 0 12px}
+.ev-group-example{display:flex;gap:12px;align-items:flex-start;background:#edf3ff;border-radius:10px;padding:12px;font-size:13px;line-height:1.75;color:#365680}
+.ev-group-example strong{flex-shrink:0;color:#244fc1}
+.ev-compose-section{padding-bottom:12px;border-bottom:1px solid #dde5f2;margin:0 0 18px!important;color:#234170}
+.ev-event-form .ev-field{color:#253d65;gap:9px;margin-bottom:18px}
+.ev-event-form input,.ev-event-form select,.ev-event-form textarea{box-sizing:border-box;width:100%;background:#fff;border-color:#d9e2f1;border-radius:12px;padding:12px 14px;transition:border-color .15s,box-shadow .15s}
+.ev-event-form input:focus,.ev-event-form select:focus,.ev-event-form textarea:focus{outline:none;border-color:#386bfa;box-shadow:0 0 0 3px #386bfa1a}
+.ev-event-form .modal-actions{background:#f7f9fe;box-shadow:0 -12px 18px #f7f9fef5;padding:14px 0 12px;margin-bottom:4px}
+.ev-event-form .modal-actions [data-close]{background:#dc2626;color:#fff;border:1px solid #dc2626;font-weight:700;margin-bottom:4px;min-height:46px}
+.ev-event-form .modal-actions [data-close]:hover{background:#b91c1c;border-color:#b91c1c}
+.ev-event-form .modal-actions [name=draft]{background:#e6edf9;color:#244779;border:1px solid #d3def0}
+@media(max-width:650px){.ev-dialog form.ev-event-form{padding:0 16px 18px}.ev-compose-header{margin-inline:-16px;padding:22px 16px;gap:12px}.ev-compose-icon{flex-basis:46px;height:46px;border-radius:14px}.ev-compose-header h2{font-size:23px}.ev-group-explainer{padding:15px}.ev-group-example{flex-direction:column;gap:3px}.ev-event-form .ev-fields{gap:0}.ev-compose-header .ev-step{letter-spacing:0;font-size:10px}}
