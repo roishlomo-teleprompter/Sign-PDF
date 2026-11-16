@@ -9,8 +9,12 @@ window.SignatureStudio=(()=>{
   const path=points.map(p=>[p[0]*900,p[1]*320]),samples=[path[0]],step=3;let remaining=step;
   for(let i=1;i<path.length;i++){let from=path[i-1],to=path[i],length=Math.hypot(to[0]-from[0],to[1]-from[1]);while(length>=remaining){const ratio=remaining/length;from=[from[0]+(to[0]-from[0])*ratio,from[1]+(to[1]-from[1])*ratio];samples.push(from);length-=remaining;remaining=step}remaining-=length}
   const last=path[path.length-1];if(Math.hypot(last[0]-samples.at(-1)[0],last[1]-samples.at(-1)[1])>.01)samples.push(last);
-  const sigma=1+strength*9,radius=Math.ceil(sigma*3);
-  return samples.map((p,i)=>{if(i===0||i===samples.length-1)return [p[0]/900,p[1]/320];let x=0,y=0,total=0;for(let j=-radius;j<=radius;j++){const q=samples[Math.max(0,Math.min(samples.length-1,i+j))],weight=Math.exp(-j*j/(2*sigma*sigma));x+=q[0]*weight;y+=q[1]*weight;total+=weight}return [(p[0]+(x/total-p[0])*strength)/900,(p[1]+(y/total-p[1])*strength)/320]});
+  const sigma=Math.min(1+strength*strength*23,Math.max(1,samples.length/5)),radius=Math.ceil(sigma*3);
+  const blurred=samples.map((p,i)=>{let x=0,y=0,total=0;for(let j=-radius;j<=radius;j++){const q=samples[Math.max(0,Math.min(samples.length-1,i+j))],weight=Math.exp(-j*j/(2*sigma*sigma));x+=q[0]*weight;y+=q[1]*weight;total+=weight}return [x/total,y/total]});
+  // Anchor the endpoints continuously rather than leaving a sharp jump between
+  // the original endpoint and a heavily rounded interior.
+  const firstShift=blurred[0].map((n,k)=>n-samples[0][k]),lastShift=blurred.at(-1).map((n,k)=>n-samples.at(-1)[k]);
+  return samples.map((p,i)=>{if(i===0||i===samples.length-1)return [p[0]/900,p[1]/320];const t=i/(samples.length-1);return p.map((n,k)=>(n+(blurred[i][k]-firstShift[k]*(1-t)-lastShift[k]*t-n)*strength)/(k===0?900:320))});
  }
  function initials(value){return String(value||'').trim().split(/\s+/u).filter(Boolean).slice(0,4).map(part=>{try{return [...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(part)][0].segment}catch{return Array.from(part)[0]}}).join('.')}
  function fontFor(text,style){const script=/[\u0590-\u05ff]/u.test(text)?'"SignWayHebrew"':/[\u0600-\u06ff]/u.test(text)?'serif':'"SignWayLatin"';return ['58px '+script+', cursive','italic 58px Georgia, serif','58px Arial, sans-serif'][style]}
@@ -80,7 +84,7 @@ window.SignatureStudio=(()=>{
     pad.onpointerdown=e=>{if(busy||e.button!==0||e.isPrimary===false)return;e.preventDefault();if(editor.strokes.length>=200||editor.strokes.reduce((n,s)=>n+s.length,0)>=6000){$('[data-error]').textContent=tr('הציור מפורט מדי. נקו ונסו חתימה קצרה יותר.','The drawing is too detailed. Clear it and try a shorter signature.');return}drawPointer=e.pointerId;stroke=[point(e)];editor.strokes.push(stroke);pad.setPointerCapture?.(e.pointerId);touch();previews()};
     pad.onpointermove=e=>{if(drawPointer!==e.pointerId||!stroke)return;e.preventDefault();const p=point(e),last=stroke[stroke.length-1];if(Math.hypot(last[0]-p[0],last[1]-p[1])<.001)return;if(editor.strokes.reduce((n,s)=>n+s.length,0)<6000)stroke.push(p);previews()};
     const end=e=>{if(drawPointer!==e.pointerId)return;pad.releasePointerCapture?.(e.pointerId);drawPointer=null;stroke=null;previews()};pad.onpointerup=end;pad.onpointercancel=end;pad.onlostpointercapture=e=>{if(drawPointer===e.pointerId){drawPointer=null;stroke=null;previews()}};
-    $('[data-clear]').onclick=()=>{editor.strokes=[];editor.text='';designOpen=false;drawPointer=null;stroke=null;touch();render()};$('[data-smooth]').onchange=e=>{editor.smoothing=e.target.checked;touch();previews()};$('[data-amount]').oninput=e=>{editor.amount=Number(e.target.value)/100;touch();previews()};
+    $('[data-clear]').onclick=()=>{editor.strokes=[];editor.text='';designOpen=false;drawPointer=null;stroke=null;touch();render()};$('[data-smooth]').onchange=e=>{editor.smoothing=e.target.checked;touch();previews()};$('[data-amount]').oninput=e=>{editor.amount=Number(e.target.value)/100;editor.smoothing=true;$('[data-smooth]').checked=true;touch();previews()};
    }else{
     $('[data-text]').oninput=e=>{editor.text=e.target.value;touch();previews()};dialog.querySelectorAll('[data-style]').forEach(button=>button.onclick=()=>{editor.style=Number(button.dataset.style);dialog.querySelectorAll('[data-style]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));touch();previews()});
    }previews();
