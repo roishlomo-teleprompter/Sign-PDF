@@ -6,7 +6,7 @@ const PUBLIC_FILES=[
  'index.html','google-drive.html','privacy.html','terms.html','manifest.webmanifest','sw.js',
  'i18n.js','document-preview.js','google-drive-config.js','google-drive-client.js','google-workspace.js',
  'google-account.js','google-migration.js','gmail-mail.js','upload-hold.js','pdf-transfer.js','events.js',
- 'shared-signatures.js','design-ui.js','design.css','events.css',
+ 'shared-signatures.js','signature-fields.js','design-ui.js','design.css','events.css',
  'icons/signway-logo.png','icons/icon-192.png','icons/icon-512.png',
  'icons/icon-maskable-512.png','icons/apple-touch-icon.png','icons/favicon-32.png',
  'vendor/pdf.min.js','vendor/pdf.worker.min.js','vendor/pdf-lib.min.js'
