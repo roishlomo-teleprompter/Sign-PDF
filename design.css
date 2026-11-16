@@ -457,3 +457,7 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .recipient-signature-marker img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .sf-box{background:#ffed808c;border-color:#ceaf39}.sf-box.selected{background:#ffe25f9e;border-color:#bd8d00}.sf-tools [data-count]{font-size:12px;color:#64728b}
 .recipient-mode .viewer-hint{min-width:0;white-space:normal;line-height:1.35}
+
+/* Five permanent navigation destinations, including the private signature library. */
+.ev-nav{grid-template-columns:repeat(5,minmax(0,1fr))}.ev-nav button{min-width:0}.ev-nav button span{max-width:100%;overflow-wrap:normal;line-height:1.2}.ev-nav button[data-tab=signatures] svg{width:27px}
+@media(max-width:600px){.ev-nav{gap:2px;padding-inline:5px}.ev-nav button{font-size:11px;padding:7px 2px;min-height:64px}.ev-nav button span{max-width:72px}.ev-nav button svg{width:24px;height:24px}}
