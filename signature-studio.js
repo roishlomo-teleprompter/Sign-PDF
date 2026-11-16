@@ -3,7 +3,14 @@ window.SignatureStudio=(()=>{
  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const clamp=n=>Math.max(0,Math.min(1,n));
  function smooth(points,amount=.55){
-  const strength=clamp(amount);return points.map((p,i,a)=>{if(!strength||i===0||i===a.length-1)return [...p];const before=a[i-1],after=a[i+1],dx=((before[0]+after[0])/2-p[0])*900*.35*strength,dy=((before[1]+after[1])/2-p[1])*320*.35*strength,length=Math.hypot(dx,dy),limit=3.5*strength,scale=length>limit?limit/length:1;return [p[0]+dx*scale/900,p[1]+dy*scale/320]});
+  const strength=clamp(amount);if(!strength||points.length<3)return points.map(p=>[...p]);
+  // Work in physical canvas distance so slow, densely sampled strokes get the
+  // same rounding as fast strokes. A wider Gaussian removes hand tremor.
+  const path=points.map(p=>[p[0]*900,p[1]*320]),samples=[path[0]],step=3;let remaining=step;
+  for(let i=1;i<path.length;i++){let from=path[i-1],to=path[i],length=Math.hypot(to[0]-from[0],to[1]-from[1]);while(length>=remaining){const ratio=remaining/length;from=[from[0]+(to[0]-from[0])*ratio,from[1]+(to[1]-from[1])*ratio];samples.push(from);length-=remaining;remaining=step}remaining-=length}
+  const last=path[path.length-1];if(Math.hypot(last[0]-samples.at(-1)[0],last[1]-samples.at(-1)[1])>.01)samples.push(last);
+  const sigma=1+strength*9,radius=Math.ceil(sigma*3);
+  return samples.map((p,i)=>{if(i===0||i===samples.length-1)return [p[0]/900,p[1]/320];let x=0,y=0,total=0;for(let j=-radius;j<=radius;j++){const q=samples[Math.max(0,Math.min(samples.length-1,i+j))],weight=Math.exp(-j*j/(2*sigma*sigma));x+=q[0]*weight;y+=q[1]*weight;total+=weight}return [(p[0]+(x/total-p[0])*strength)/900,(p[1]+(y/total-p[1])*strength)/320]});
  }
  function initials(value){return String(value||'').trim().split(/\s+/u).filter(Boolean).slice(0,4).map(part=>{try{return [...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(part)][0].segment}catch{return Array.from(part)[0]}}).join('.')}
  function fontFor(text,style){const script=/[\u0590-\u05ff]/u.test(text)?'"SignWayHebrew"':/[\u0600-\u06ff]/u.test(text)?'serif':'"SignWayLatin"';return ['58px '+script+', cursive','italic 58px Georgia, serif','58px Arial, sans-serif'][style]}
@@ -15,7 +22,7 @@ window.SignatureStudio=(()=>{
   for(const raw of editor.strokes){const points=original||!editor.smoothing?raw:smooth(raw,editor.amount);if(!points.length)continue;const xy=p=>[p[0]*canvas.width,p[1]*canvas.height];ctx.beginPath();ctx.moveTo(...xy(points[0]));
    if(points.length===1){ctx.arc(...xy(points[0]),1.6,0,Math.PI*2);ctx.fill();continue}
    if(original||!editor.smoothing||editor.amount<=0){for(const p of points.slice(1))ctx.lineTo(...xy(p))}
-   else{const roundness=.28*editor.amount;for(let i=1;i<points.length-1;i++){const previous=xy(points[i-1]),p=xy(points[i]),next=xy(points[i+1]);ctx.lineTo(p[0]+(previous[0]-p[0])*roundness,p[1]+(previous[1]-p[1])*roundness);ctx.quadraticCurveTo(p[0],p[1],p[0]+(next[0]-p[0])*roundness,p[1]+(next[1]-p[1])*roundness)}ctx.lineTo(...xy(points[points.length-1]))}ctx.stroke();
+   else{for(let i=1;i<points.length-1;i++){const p=xy(points[i]),next=xy(points[i+1]);ctx.quadraticCurveTo(p[0],p[1],(p[0]+next[0])/2,(p[1]+next[1])/2)}const end=xy(points.at(-1));ctx.quadraticCurveTo(...end,...end)}ctx.stroke();
   }
  }
  function exportPng(editor,original=false){
@@ -27,7 +34,7 @@ window.SignatureStudio=(()=>{
  let active=null;
  function open({db,userId=null,tr,manage=false,onUse=()=>{}}){
   active?.close();const dialog=document.createElement('dialog');dialog.className='signature-studio';dialog.setAttribute('aria-label',manage?tr('החתימות שלי','My signatures'):tr('איך תרצו לחתום?','How would you like to sign?'));document.body.append(dialog);
-  let library={entries:[],defaultId:null},loading=!!userId,busy=false,disposed=false,dirty=false,tab=manage?'saved':'draw',editId=null,editor={kind:'draw',text:'',style:0,strokes:[],smoothing:true,amount:.55},drawPointer=null,stroke=null,renderVersion=0;
+  let library={entries:[],defaultId:null},loading=!!userId,busy=false,disposed=false,dirty=false,tab=manage?'saved':'draw',editId=null,editor={kind:'draw',text:'',style:0,strokes:[],smoothing:true,amount:.8},drawPointer=null,stroke=null,renderVersion=0;
   const $=selector=>dialog.querySelector(selector),canSave=!!userId&&typeof db?.signwaySignatures==='function';
   const close=()=>{if(disposed)return;disposed=true;renderVersion++;dialog.close();dialog.remove();if(active?.dialog===dialog)active=null};active={dialog,close};
   const message=error=>{const el=$('[data-error]');if(el)el.textContent=error?.message==='EMPTY_SIGNATURE'?tr('יש לצייר או להקליד חתימה לפני האישור.','Draw or type a signature before confirming.'):error?.message==='SIGNATURE_TOO_LARGE'?tr('החתימה גדולה מדי. נסו לצייר בקווים פשוטים יותר.','The signature is too large. Try drawing fewer strokes.'):error?.message==='Signature library full'?tr('ניתן לשמור עד 12 חתימות. מחקו חתימה כדי להוסיף חדשה.','Save up to 12 signatures. Delete one to add another.'):tr('לא ניתן להשלים את הפעולה. אפשר לנסות שוב.','Unable to complete this action. Please try again.')};
@@ -44,7 +51,7 @@ window.SignatureStudio=(()=>{
   }
   function renderLibrary(){
    const host=$('[data-editor]');host.innerHTML=loading?`<p role="status">${tr('טוען חתימות שמורות...','Loading saved signatures...')}</p>`:library.entries.length?`<div class="ss-library">${library.entries.map(e=>`<article class="ss-entry"><div class="ss-entry-title"><strong dir="auto">${esc(e.name)}</strong>${e.id===library.defaultId?`<span class="ss-default">${tr('ברירת מחדל','Default')}</span>`:''}</div><img src="data:image/png;base64,${esc(e.png)}" alt="${esc(e.name)}"><div class="ss-entry-actions">${!manage?`<button type="button" data-use="${e.id}" class="primary">${tr('בחירה בחתימה','Choose signature')}</button>`:''}<button type="button" data-edit="${e.id}">${tr('עריכה','Edit')}</button>${e.id!==library.defaultId?`<button type="button" data-default="${e.id}">${tr('קביעה כברירת מחדל','Set as default')}</button>`:''}<button type="button" data-delete="${e.id}" class="ss-delete">${tr('מחיקה','Delete')}</button></div></article>`).join('')}</div>`:`<div class="ss-empty">${tr('עדיין אין חתימות שמורות. צרו חתימה ושמרו אותה לשימוש חוזר.','No saved signatures yet. Create one to reuse later.')}</div>`;
-   $('.ss-footer').innerHTML=`<button type="button" data-add class="primary">${tr('הוספת חתימה','Add signature')}</button><button type="button" data-done>${tr('סגירה','Close')}</button>`;$('[data-add]').onclick=()=>{editId=null;editor={kind:'draw',text:'',style:0,strokes:[],smoothing:true,amount:.55};tab='draw';dirty=false;render()};$('[data-done]').onclick=close;
+   $('.ss-footer').innerHTML=`<button type="button" data-add class="primary">${tr('הוספת חתימה','Add signature')}</button><button type="button" data-done>${tr('סגירה','Close')}</button>`;$('[data-add]').onclick=()=>{editId=null;editor={kind:'draw',text:'',style:0,strokes:[],smoothing:true,amount:.8};tab='draw';dirty=false;render()};$('[data-done]').onclick=close;
    host.querySelectorAll('[data-use]').forEach(button=>button.onclick=()=>{const entry=library.entries.find(e=>e.id===button.dataset.use);if(!entry||busy)return;onUse('data:image/png;base64,'+entry.png);close()});
    host.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>{const entry=library.entries.find(e=>e.id===button.dataset.edit);if(!entry||busy)return;editId=entry.id;editor={...JSON.parse(JSON.stringify(entry.editor)),kind:entry.kind};tab=entry.kind;dirty=false;render();$('[data-label]').value=entry.name});
    host.querySelectorAll('[data-default]').forEach(button=>button.onclick=async()=>{if(busy)return;setBusy(true);try{library=await call('default',{id:button.dataset.default});if(!disposed)render()}catch(e){message(e)}finally{if(!disposed)setBusy(false)}});
