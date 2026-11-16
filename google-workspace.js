@@ -31,6 +31,7 @@ window.GoogleWorkspace=(()=>{
   }}};
   return {auth:identity.auth,from,rpc,storage,
    async signwayUsesDrive(){return true},
+   async signwaySignatures(action,payload={}){if(publicMode)throw new Error('Owner operation unavailable on a signing link');if(!['list','save','delete','default'].includes(action))throw new Error('Unsupported signature action');return owner('signature-library-'+action,payload)},
    async signwaySettings(){return owner('settings-get')},
    async signwaySaveLanguage(language){const r=await identity.auth.getSession();if(r.error)throw r.error;if(r.data?.session?.user&&!r.data.session.user.is_anonymous)await owner('settings-set',{settings:{language}})},
    async signwayStoreSelfSigned({original,signed,title,creationId}){return owner('self-save',{creationId,title,original:await base64(original),signed:await base64(signed)})},

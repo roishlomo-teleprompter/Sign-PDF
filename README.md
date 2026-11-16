@@ -32,3 +32,18 @@ Languages: he, en, es, pt-BR, fr, de, ar, ja, ko, zh-CN, ru. The service accepts
 
 
 The first language choice follows the device's ordered language preferences, falling back to English when none are supported. Legacy automatic account defaults do not override the device. Successful manual selections are saved separately on that device and reused on later opens. A native-language download dialog appears only for missing translations; cached languages switch without the dialog.
+
+### Personal signature library
+
+`signature-studio.js` provides drawing with adjustable local stroke smoothing,
+typed full names and initials, and an explicit original/preview approval step.
+The profile menu opens the private library. Saving for reuse is opt-in; guests
+can sign without creating a library or account. Hebrew handwriting and Latin
+handwriting fonts are bundled locally with their SIL OFL licenses in `fonts/`.
+User-entered names, initials and drawn strokes are never translation inputs.
+
+`google-drive-backend/Signatures.gs` stores up to 12 signatures and their editable
+source data in the authenticated account's personal Drive workspace manifest.
+Library operations are owner-only and are unavailable through recipient tokens.
+The existing document-signing flow still requires a separate explicit submission.
+Deploy the backend including `Signatures.gs` before releasing the new frontend.

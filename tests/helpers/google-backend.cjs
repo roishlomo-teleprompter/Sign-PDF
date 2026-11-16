@@ -18,7 +18,7 @@ function fixture(){
    const id=u.pathname.split('/').pop(),f=files.get(id);if(!f||f.owner!==owner)return response(404,{});if(method==='patch'){Object.assign(f,JSON.parse(options.payload));return response(200,{id})}if(u.searchParams.get('alt')==='media')return response(200,{},f.bytes);return response(200,{id:f.id,name:f.name,size:f.bytes.length,mimeType:f.mimeType,trashed:!!f.trashed});
   }}
  };
- vm.createContext(ctx);for(const f of ['Google.gs','Drive.gs','Workspace.gs','Shared.gs','Import.gs'])vm.runInContext(fs.readFileSync('google-drive-backend/'+f,'utf8'),ctx,{filename:f});
+ vm.createContext(ctx);for(const f of ['Google.gs','Drive.gs','Workspace.gs','Shared.gs','Signatures.gs','Import.gs'])vm.runInContext(fs.readFileSync('google-drive-backend/'+f,'utf8'),ctx,{filename:f});
  const sessions={};for(const [id,char] of [['101','a'],['202','b']]){const token=char.repeat(96);sessions[id]=token;props['account:'+id]=JSON.stringify({id,email:id+'@example.com',refreshToken:'refresh-'+id,scopes:[],name:'Test'});props['session:'+digest(token)]=JSON.stringify({id,expires:Date.now()+3600000});cache.set('google-token:'+id,'access-'+id)}
  const call=(id,action,p={})=>ctx.googleDispatch(sessions[id],action,p),owner=(id,op,p={})=>call(id,'workspace-owner-call',{op,...p}),query=(id,table,operation,values,filters=[])=>owner(id,'query',{table,query:{operation,values,filters,columns:'*'}}),request=id=>owner(id,'rpc',{name:'create_sign_request',args:{p_title:'Private.pdf'}})[0];
  return {ctx,props,cache,files,calls,sessions,call,owner,query,request,deny:value=>deny=value};

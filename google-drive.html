@@ -58,6 +58,7 @@
 .signer-card #status.completed{display:block!important;color:#087b62;font-weight:600;padding:18px;background:#eefaf5;border-radius:14px}
 </style>
   <link rel="stylesheet" href="events.css?v=25">
+  <link rel="stylesheet" href="signature-studio.css">
   <link rel="stylesheet" href="design.css?v=37">
   <script src="design-ui.js?v=31"></script>
   <script src="document-preview.js?v=37"></script>
@@ -130,6 +131,7 @@
   <script src="./upload-hold.js"></script>
   <script src="./pdf-transfer.js"></script>
   <script src="./signature-fields.js"></script>
+  <script src="./signature-studio.js"></script>
   
   <script src="./events.js?v=36"></script>
   <script src="./google-account.js"></script>
@@ -225,7 +227,7 @@
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments,onCreateShared:startSharedRequest,onNewDocument:startNewDocument,onOpenShared:id=>sharedOwner?.openDocument(id)})}
-      if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr})}
+      if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,onSignatures:()=>SignatureStudio.open({db,userId:ownerId,tr,manage:true})})}
       window.GoogleMigration?.mount({db,tr});
       db.signwayCompactStorage?.().catch(error=>console.warn('Drive cleanup deferred: '+error.message));
       if(window.SharedSignatures&&window.SharedDrive?.enabled(user)){sharedOwner=SharedSignatures.owner({db,ownerId,tr,saveBlob,selected:()=>selectedUpload,unifiedDocuments:true,onDocumentsChanged:()=>filterDocuments(),onNewDocument:startNewDocument,onAvailable:()=>refreshUploadLabel(),showFlow:flow=>{if(flow==='shared')eventDashboard?.selectTab?.('upload');setFlow(flow)},notify:showNotice,progress:startDeletionProgress,confirmDeleteAll:()=>askConfirm(tr('מחיקת כל המסמכים המשותפים','Delete all shared documents'),tr('כל המסמכים בחתימה משותפת יימחקו, גם הממתינים וגם החתומים. קובצי ה-PDF, החתימות ונתוני החתימה יועברו לסל המחזור ב-Drive. הקישורים יפסיקו לפעול. אנשי הקשר והמסמכים הרגילים יישמרו.','All shared documents will be deleted, including pending and signed ones. PDFs, signatures and signing data will be moved to Drive Trash. Personal links will stop working. Contacts and regular documents will be kept.'),tr('מחיקת הכול','Delete all')),confirmDelete:doc=>askConfirm(tr('מחיקת מסמך משותף','Delete shared document'),tr('המסמך, כל גרסאות ה-PDF, החתימות ונתוני החתימה יועברו לסל המחזור ב-Drive. הקישורים יפסיקו לפעול. אנשי הקשר יישמרו.','The document, all PDF versions, signatures and signing data will be moved to Drive Trash. Personal links will stop working. Contacts will be kept.'),tr('מחיקת המסמך','Delete document')),confirmCancel:()=>askConfirm(tr('ביטול בקשת החתימות','Cancel signature request'),tr('הקישורים יפסיקו לפעול. החתימות שכבר נשמרו יישארו במסמך.','Personal links will stop working. Existing signatures remain in the document.'),tr('ביטול הבקשה','Cancel request')),mail:options=>GmailMail.compose({db,ownerId,tr,...options})});$('createSharedBtn').onclick=()=>sharedOwner.openEditor();sharedOwner.refresh()}
@@ -340,10 +342,11 @@
     function pos(e){const r=signPad.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
     function startDraw(e){e.preventDefault();drawing=true;hasInk=true;const p=pos(e);sctx.beginPath();sctx.moveTo(p.x,p.y)}function moveDraw(e){if(!drawing)return;e.preventDefault();const p=pos(e);sctx.lineTo(p.x,p.y);sctx.stroke()}function endDraw(){drawing=false}
     signPad.addEventListener('pointerdown',startDraw);signPad.addEventListener('pointermove',moveDraw);window.addEventListener('pointerup',endDraw);
-    function openSignPad(){signDialog.showModal();setTimeout(()=>{resizePad();sctx.clearRect(0,0,signPad.width,signPad.height);hasInk=false},30)}
+    function openSignPad(){if(window.SignatureStudio)return SignatureStudio.open({db,userId:ownerId,tr,onUse:applySignature});signDialog.showModal();setTimeout(()=>{resizePad();sctx.clearRect(0,0,signPad.width,signPad.height);hasInk=false},30)}
     $('drawBtn').onclick=()=>{clearSignedOutput();$('downloadBtn').disabled=!signatureData;return openPlacementViewer()};$('clearPad').onclick=()=>{sctx.clearRect(0,0,signPad.width,signPad.height);hasInk=false};$('cancelSign').onclick=()=>signDialog.close();
     $('confirmPlacementBtn').onclick=e=>{e.stopPropagation();placement.confirmed=true;openSignPad()};
-    $('useSignature').onclick=()=>{if(!hasInk){status(tr('יש לצייר חתימה לפני האישור.','Draw a signature before confirming.'),true);return}clearSignedOutput();signatureData=signPad.toDataURL('image/png');signDialog.close();showPlacement();$('downloadBtn').disabled=false;actionButton('drawBtn','pen',tr('עריכה','Edit'));status(lockedFields.length?tr('החתימה הוצבה בכל המקומות שקבע השולח. אפשר לאשר ולהמשיך.','Your signature is placed at every sender location. Confirm to continue.'):tr('החתימה מוקמה בעמוד. אפשר להזיז אותה שוב או לשלוח את המסמך.','The signature is placed on the page. You can move it again or send the document.'))};
+    function applySignature(png){clearSignedOutput();signatureData=png;if(signDialog.open)signDialog.close();showPlacement();$('downloadBtn').disabled=false;actionButton('drawBtn','pen',tr('עריכה','Edit'));status(lockedFields.length?tr('החתימה הוצבה בכל המקומות שקבע השולח. אפשר לאשר ולהמשיך.','Your signature is placed at every sender location. Confirm to continue.'):tr('החתימה מוקמה בעמוד. אפשר להזיז אותה שוב או לשלוח את המסמך.','The signature is placed on the page. You can move it again or send the document.'))}
+    $('useSignature').onclick=()=>{if(!hasInk){status(tr('יש לצייר חתימה לפני האישור.','Draw a signature before confirming.'),true);return}applySignature(signPad.toDataURL('image/png'))};
     signatureLayer.addEventListener('pointerdown',e=>{if(lockedFields.length||e.target.closest('button'))return;clearSignedOutput();$('downloadBtn').disabled=!signatureData;e.preventDefault();const rect=signatureLayer.getBoundingClientRect();drag={pointerId:e.pointerId,dx:e.clientX-rect.left,dy:e.clientY-rect.top};signatureLayer.setPointerCapture(e.pointerId);signatureLayer.classList.add('dragging')});
     signatureLayer.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;e.preventDefault();const wr=workspace.getBoundingClientRect(),left=e.clientX-wr.left+workspace.scrollLeft-drag.dx,top=e.clientY-wr.top+workspace.scrollTop-drag.dy;saveVisiblePlacement(left,top);showPlacement()});
     signatureLayer.addEventListener('pointerup',e=>{if(!drag||drag.pointerId!==e.pointerId)return;signatureLayer.releasePointerCapture(e.pointerId);signatureLayer.classList.remove('dragging');drag=null;placement.confirmed=!!signatureData});
