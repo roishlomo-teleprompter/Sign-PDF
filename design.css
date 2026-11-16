@@ -417,3 +417,43 @@ body.upload-pending .upload[aria-busy=true]::after{box-sizing:border-box}
 
 /* Sender signature-location editor, usable over either request composer. */
 .signature-field-editor{width:min(960px,96vw);max-height:94dvh;padding:20px;border:0;border-radius:22px;color:#203252;box-shadow:0 18px 70px #10264a45}.signature-field-editor::backdrop{background:#10264a99}.signature-field-editor h2{margin:0;font-size:1.3rem}.signature-field-editor header p{margin:8px 0;color:#52627b}.signature-field-editor header strong{display:block;overflow-wrap:anywhere}.sf-tools,.signature-field-editor footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.sf-tools label{display:flex;align-items:center;gap:6px}.sf-tools label[hidden]{display:none}.sf-scroll{max-height:54dvh;overflow:auto;background:#e8eef7;padding:12px;border-radius:12px;direction:ltr}.sf-page{position:relative;width:100%;line-height:0}.sf-page canvas{display:block;width:100%;height:auto;cursor:crosshair}.sf-boxes{position:absolute;inset:0;pointer-events:none}.sf-box{position:absolute;box-sizing:border-box;border:2px dashed #7a8bab;background:#f4f6faab;color:#203252;display:flex;align-items:center;justify-content:center;font-size:clamp(10px,2vw,16px);line-height:1.2;overflow:hidden;pointer-events:auto;touch-action:none;cursor:grab;user-select:none}.sf-box.selected{border-color:#2455f5;background:#e7efffd9}.sf-error{color:#b52636;min-height:1.2em}.signature-field-editor button{min-height:42px}.signature-field-editor select{max-width:220px}.signature-field-editor footer{justify-content:flex-end}@media(max-width:600px){.signature-field-editor{padding:14px}.sf-scroll{padding:4px}.signature-field-editor header p{font-size:.88rem}}
+
+/* Keep mobile upload states at the device scale, including long document names. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body[data-screen=upload] .app-shell,body[data-screen=upload] #appContent,body[data-screen=upload] #uploadCard,body[data-screen=upload] .upload-row,body[data-screen=upload] .link-result{min-width:0;max-width:100%}
+body[data-screen=upload] .upload-row>.selected-file{min-width:0;width:100%;max-width:100%;overflow-wrap:anywhere;word-break:break-word;white-space:normal}
+body[data-screen=upload] .topbar>.brand,body[data-screen=upload] .brand-copy{min-width:0}
+body[data-screen=upload] .brand-copy b{white-space:nowrap}
+@media(max-width:700px){
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .app-shell{width:calc(100% - 28px)}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .topbar{height:64px;min-height:64px;margin-bottom:10px}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .brand-copy b{font-size:19px}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .brand-icon{width:38px;height:38px}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .intro h1{font-size:22px;line-height:1.35;overflow-wrap:anywhere}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .upload-subtitle{font-size:14px;line-height:1.4}
+ body[data-screen=upload]:has(#dropZone:is(.file-ready,.uploaded,[aria-busy=true])) .upload-circle{height:min(180px,calc(100vw - 100px),calc(100% - 52px));max-width:calc(100vw - 100px)}
+ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded,[aria-busy=true]){padding:14px 10px;gap:6px}
+ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded,[aria-busy=true]) strong{font-size:16px;line-height:1.35;max-width:145px;overflow-wrap:anywhere}
+ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded,[aria-busy=true]) .upload-symbol svg{width:40px;height:40px}
+ body[data-screen=upload] .upload-row>.selected-file{font-size:12px;line-height:1.5;margin-bottom:12px}
+ body[data-screen=upload][data-flow=link] .result-heading strong{font-size:16px;line-height:1.4}
+ body[data-screen=upload][data-flow=link] .result-check{width:34px;height:34px;flex-shrink:0;font-size:24px}
+ body[data-screen=upload][data-flow=link] .share-options button{min-height:66px;font-size:13px;padding:9px 4px;gap:6px}
+ body[data-screen=upload][data-flow=link] .share-options button svg{width:25px;height:25px}
+}
+
+/* Green is a completed upload status, not an upload action. */
+body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded){pointer-events:none;cursor:default;transform:none;justify-content:center;align-items:center;padding:14px 18px;gap:8px}
+body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) strong{flex:0 0 auto;display:block;width:100%;max-width:150px;margin:0;text-align:center;font-size:16px;line-height:1.3;white-space:normal;overflow-wrap:normal;word-break:normal}
+body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-symbol{display:flex;align-items:center;justify-content:center;flex:0 0 auto;line-height:1}
+body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-symbol svg{display:block;width:34px;height:34px}
+@media(max-height:650px){body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded){padding:10px 14px;gap:6px}body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) strong{font-size:14px}body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-symbol svg{width:28px;height:28px}}
+
+/* Sender-defined locations are fixed yellow highlighter marks on the PDF preview. */
+.recipient-signature-markers{position:absolute;inset:0;pointer-events:none;z-index:3}
+.recipient-signature-marker{position:absolute;box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:3px;border:2px solid #e5ae16;border-radius:5px;background:#ffeb568c;color:#5d4200;box-shadow:0 0 0 3px #fff2a33d;font-size:clamp(10px,2vw,15px);line-height:1.2;font-weight:700;pointer-events:auto;touch-action:manipulation;cursor:pointer;overflow:hidden;white-space:normal}
+.recipient-signature-marker:not(:disabled):active{transform:none;background:#ffe55ba8}
+.recipient-signature-marker.is-signed{background:#fff4ad55;border-color:#cba229}
+.recipient-signature-marker img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.sf-box{background:#ffed808c;border-color:#ceaf39}.sf-box.selected{background:#ffe25f9e;border-color:#bd8d00}.sf-tools [data-count]{font-size:12px;color:#64728b}
+.recipient-mode .viewer-hint{min-width:0;white-space:normal;line-height:1.35}
