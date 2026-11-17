@@ -146,6 +146,7 @@
   <script src="./google-workspace.js"></script>
   <script src="./upload-hold.js"></script>
   <script src="./pdf-transfer.js"></script>
+  <script src="./document-scanner.js"></script>
   <script src="./signature-fields.js"></script>
   <script src="./signature-studio.js"></script>
 
@@ -282,7 +283,7 @@
       selectedUpload=null;$('createSharedBtn').classList.add('hidden');$('selfSignBtn').disabled=true;clearSignedOutput();dropZone.classList.remove('uploaded','file-ready');refreshUploadLabel();$('createLinkBtn').disabled=true;$('linkResult').classList.add('hidden');$('uploadError').textContent='';
       if(!file){$('selectedFile').textContent='';return}
       $('selectedFile').textContent=tr('קורא את הקובץ...','Reading file...');
-      try{if(['image/png','image/jpeg'].includes(file.type)){if(file.size>26214400)throw new Error(tr('התמונה גדולה מדי','Image is too large'));const pdf=await PDFLib.PDFDocument.create(),bytes=await file.arrayBuffer(),img=file.type==='image/png'?await pdf.embedPng(bytes):await pdf.embedJpg(bytes),scale=Math.min(1,1600/Math.max(img.width,img.height)),page=pdf.addPage([img.width*scale,img.height*scale]);page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()});file=new File([await pdf.save()],file.name.replace(/\.[^.]+$/,'')+'.pdf',{type:'application/pdf'})}const prepared=await PdfTransfer.prepare(file);if(version!==selectionVersion)return;selectedUpload=prepared;dropZone.classList.add('file-ready');refreshUploadLabel();$('selectedFile').textContent=prepared.name;$('createLinkBtn').disabled=false;$('selfSignBtn').disabled=false;refreshUploadLabel()}
+      try{if(['image/png','image/jpeg'].includes(file.type)){if(file.size>26214400)throw new Error(tr('התמונה גדולה מדי','Image is too large'));file=await DocumentScanner.scan(file,tr);if(!file){if(version===selectionVersion){$('selectedFile').textContent='';fileInput.value=''}return}}const prepared=await PdfTransfer.prepare(file);if(version!==selectionVersion)return;selectedUpload=prepared;dropZone.classList.add('file-ready');refreshUploadLabel();$('selectedFile').textContent=prepared.name;$('createLinkBtn').disabled=false;$('selfSignBtn').disabled=false;refreshUploadLabel()}
       catch(error){if(version!==selectionVersion)return;$('selectedFile').textContent='';$('uploadError').textContent=PdfTransfer.message(error,tr)}
     }
     $('cancelSelectedBtn').onclick=async()=>{if(!selectedUpload||document.body.dataset.flow!=='choose'||dropZone.getAttribute('aria-busy')==='true')return;const version=selectionVersion;if(await askConfirm(tr('ביטול העלאת המסמך','Cancel document upload'),tr('לבטל את העלאת המסמך?','Cancel this document upload?'),tr('ביטול העלאה','Cancel upload'))&&version===selectionVersion&&selectedUpload&&document.body.dataset.flow==='choose'&&dropZone.getAttribute('aria-busy')!=='true')await $('cancelUploadBtn').onclick()};

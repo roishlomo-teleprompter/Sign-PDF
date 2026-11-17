@@ -5,7 +5,7 @@ const ROOT=path.resolve(__dirname,'..');
 const PUBLIC_FILES=[
  'index.html','google-drive.html','oauth-callback.html','privacy.html','terms.html','manifest.webmanifest','sw.js',
  'i18n.js','document-preview.js','google-drive-config.js','google-drive-client.js','google-workspace.js',
- 'google-account.js','google-migration.js','gmail-mail.js','upload-hold.js','pdf-transfer.js','events.js',
+ 'google-account.js','google-migration.js','gmail-mail.js','upload-hold.js','pdf-transfer.js','document-scanner.js','events.js',
  'signature-studio.js','signature-studio.css','fonts/gveret-levin.ttf','fonts/caveat.ttf','fonts/allura.ttf','fonts/allura-OFL.txt','fonts/lobster.ttf','fonts/lobster-OFL.txt','fonts/aref-ruqaa.ttf','fonts/aref-ruqaa-OFL.txt','fonts/gveret-levin-OFL.txt','fonts/caveat-OFL.txt',
  'shared-signatures.js','signature-fields.js','design-ui.js','design.css','events.css',
  'icons/signway-logo.png','icons/icon-192.png','icons/icon-512.png',
