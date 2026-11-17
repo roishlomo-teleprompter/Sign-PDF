@@ -23,7 +23,7 @@ function personalDrive_(){
   var payload=Utilities.newBlob(header).getBytes().concat(blob.getBytes(),Utilities.newBlob('\r\n--'+boundary+'--\r\n').getBytes());
   var m=JSON.parse(personalRequest_('upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType',{method:'post',contentType:'multipart/related; boundary='+boundary,payload:payload}).getContentText());return file(m);
  }
- function folder(id){return {getId:()=>id,getJsonFiles:()=>{var items=[],page='';do{var data=personalJson_('drive/v3/files?q='+encodeURIComponent("'"+id+"' in parents and trashed = false and mimeType = 'application/json'")+'&fields=nextPageToken,files(id,name,size,mimeType)&pageSize=100'+(page?'&pageToken='+encodeURIComponent(page):''));items=items.concat(data.files||[]);page=data.nextPageToken||''}while(page);return items.map(file)},createFolder:name=>folder(create({name:name,mimeType:'application/vnd.google-apps.folder',parents:[id]}).getId()),createFile:b=>create({name:b.getName(),mimeType:b.getContentType(),parents:[id]},b),getFilesByName:name=>{
+ function folder(id){return {getId:()=>id,getJsonFiles:()=>{var items=[],page='';do{var data=personalJson_('drive/v3/files?q='+encodeURIComponent("'"+id+"' in parents and trashed = false and mimeType = 'application/json'")+'&fields=nextPageToken,files(id,name,size,mimeType)&pageSize=100'+(page?'&pageToken='+encodeURIComponent(page):''));items=items.concat(data.files||[]);page=data.nextPageToken||''}while(page);return items.map(file)},createFolder:name=>folder(create({name:name,mimeType:'application/vnd.google-apps.folder',parents:[id]}).getId()),createFile:(b,properties)=>create({name:b.getName(),mimeType:b.getContentType(),parents:[id],...(properties?{appProperties:properties}:{})},b),getPdfFiles:()=>{var items=[],page='';do{var data=personalJson_('drive/v3/files?q='+encodeURIComponent("'"+id+"' in parents and mimeType = 'application/pdf'")+'&fields=nextPageToken,files(id)&pageSize=100'+(page?'&pageToken='+encodeURIComponent(page):''));items=items.concat(data.files||[]);page=data.nextPageToken||''}while(page);return items.map(f=>f.id)},getFilesByName:name=>{
   var escaped=String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'"),q="'"+id+"' in parents and trashed = false and name = '"+escaped+"'",items=[],page='';
   do{var data=personalJson_('drive/v3/files?q='+encodeURIComponent(q)+'&fields=nextPageToken,files(id,name,size,mimeType)&pageSize=100'+(page?'&pageToken='+encodeURIComponent(page):''));items=items.concat(data.files||[]);page=data.nextPageToken||''}while(page);
   var i=0;return {hasNext:()=>i<items.length,next:()=>file(items[i++])};
@@ -38,3 +38,14 @@ function personalSheets_(){
 }
 
 function personalDeleteOriginal_(id){if(typeof id!=='string'||!/^[-\w]+$/.test(id))throw new Error('Invalid original file');personalRequest_('drive/v3/files/'+id,{method:'delete',acceptNotFound:true})}
+
+/* Move the existing object, preserving links and bytes. Verify Drive's committed metadata. */
+function personalMove_(id,from,to,name){
+ if([id,from,to].some(v=>typeof v!=='string'||!/^[-\w]+$/.test(v)))throw new Error('Invalid Drive move');
+ const path='drive/v3/files/'+id,read=()=>personalJson_(path+'?fields=id,name,parents,trashed'),before=read();
+ if(before.trashed||!(before.parents||[]).length||(before.parents||[]).some(p=>p!==from&&p!==to))throw new Error('Unexpected file location');
+ const parents=before.parents||[],query='?fields=id,name,parents,trashed'+(!parents.includes(to)?'&addParents='+to:'')+(from!==to&&parents.includes(from)?'&removeParents='+from:'');
+ personalJson_(path+query,'patch',name===undefined?{}:{name});
+ const after=read();if(after.trashed||after.parents?.length!==1||after.parents[0]!==to||name!==undefined&&after.name!==name)throw new Error('Drive move verification failed');
+}
+function documentPdfName_(title){const name=String(title||'document').replace(/[\x00-\x1f]/g,'').trim();return /\.pdf$/i.test(name)?name:name+'.pdf'}

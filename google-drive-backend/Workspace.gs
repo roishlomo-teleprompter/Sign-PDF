@@ -77,6 +77,7 @@ function workspacePut_(w,path,base64){
  if(existing){if(existing.sha256!==sha256)throw new Error('An existing PDF cannot be replaced');return}
  const folder=personalDrive_().getFolderById(path.endsWith('/signed.pdf')?personalContext_.account.signedId:personalContext_.account.originalsId),name=hash_(path)+'-'+sha256+'.pdf',found=folder.getFilesByName(name),file=found.hasNext()?found.next():folder.createFile(Utilities.newBlob(bytes,'application/pdf',name));
  if(file.getSize()!==bytes.length||hashBytes_(file.getBlob().getBytes())!==sha256)throw new Error('Drive PDF verification failed');
+ const request=w.tables.sign_requests.find(r=>r.original_path===path||r.signed_path===path);if(request)file.setName(documentPdfName_(request.title));
  w.files.push({path,fileId:file.getId(),sha256,bytes:bytes.length});
 }
 function workspaceDownload_(w,path){const item=w.files.find(f=>f.path===path);if(!item)throw new Error('PDF not found');return {base64:Utilities.base64Encode(personalDrive_().getFileById(item.fileId).getBlob().getBytes())}}
