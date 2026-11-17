@@ -22,3 +22,5 @@
 
 /* Visible drawing boundary belongs to the editor, never to the exported signature. */
 .signature-studio .ss-pad-wrap{padding:10px;border:2px solid #8ea9e0;background:#f2f6ff}.signature-studio .ss-pad-wrap canvas{border:2px dashed #a6b9df;border-radius:9px;background:#fff;box-sizing:border-box}.signature-studio .ss-pad-wrap [data-clear]{margin:8px 0 0 auto}
+
+.ss-signature-choices{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}.ss-signature-choices .ss-preview{display:block;width:100%;min-width:0;padding:8px;margin:0;border:2px solid #d7e5fe;cursor:pointer}.ss-signature-choices .ss-preview[aria-pressed=true]{border-color:#2455f5;box-shadow:0 0 0 2px #2455f51a}.ss-signature-choices .ss-preview:disabled{opacity:.4;cursor:default}.ss-signature-choices canvas{width:100%;height:auto;display:block;aspect-ratio:900/320}
