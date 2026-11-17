@@ -152,3 +152,30 @@ Private user document data can remain in each user's Drive.
 exercise per-account Drive REST authorization, offline-owner public signing, isolation,
 fail-closed writes, proof/handoff replay resistance, shared indexes, client capability
 scoping and the absence of legacy imports. These mocks are not cloud acceptance tests.
+
+## Multi-account browser sign-in: site-owned callback
+
+The Apps Script browser account router can fail for a non-default Google account.
+The prepared alternative returns OAuth to the existing app origin at
+`https://roishlomo-teleprompter.github.io/Sign-PDF/oauth-callback.html`.
+The callback has no external assets, removes its query immediately, and transfers
+its one-time code to the app via a fragment. The credentialless RPC bridge then
+exchanges it server-side. Browser proof, state, nonce, issuer, audience, expiry,
+verified email, Drive scope and Gmail same-account checks still apply.
+Client secrets and refresh tokens remain private to Apps Script.
+
+Activation order (do not set the property before all preceding steps):
+1. Publish the frontend, including `oauth-callback.html`.
+2. Update the live combined Apps Script Google.gs section and Bridge.html,
+   then deploy a new version to the existing endpoint with unchanged permissions.
+3. With explicit approval for the OAuth configuration change, add the callback
+   URI above to the existing Web OAuth client's authorized redirect URIs in
+   Google Cloud. Keep the previous /exec URI for existing flows and rollback.
+4. Set Script Property `OAUTH_REDIRECT_URI` to that exact callback URI.
+5. Test fresh sign-in with each of two accounts simultaneously present in a
+   regular browser, account isolation, missing consent, cancellation and Gmail.
+
+Until step 4, the existing /exec callback remains active. Each newly started
+flow stores its redirect URI so activation does not change its token exchange.
+Rollback: remove `OAUTH_REDIRECT_URI` and start a new sign-in. Do not remove
+any account data or tokens to roll back the callback path.

@@ -1,0 +1,4 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Cache-Control" content="no-store"><title>Sign Away</title></head><body><p data-he="חוזרים לאפליקציה..." data-en="Returning to the app...">חוזרים לאפליקציה...</p><script>
+// No external assets are loaded while a Google authorization code is in the URL.
+const params=new URLSearchParams(location.search),state=params.get('state'),code=params.get('code'),error=params.get('error');history.replaceState(null,'',location.pathname);const home=new URL('./',location.href);if(/^[a-f0-9]{96}$/.test(state||'')&&(code||error)){const fragment=new URLSearchParams({google_state:state});fragment.set(error?'google_error':'google_code',error||code);home.hash=fragment.toString()}location.replace(home.href);
+</script></body></html>

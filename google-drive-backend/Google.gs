@@ -10,7 +10,7 @@ function readProp_(key){var v=props_().getProperty(key);return v?JSON.parse(v):n
 function writeProp_(key,value){props_().setProperty(key,JSON.stringify(value))}
 function personalRefreshContext_(){if(personalContext_&&personalContext_.account){var latest=readProp_('account:'+personalContext_.account.id);if(!latest)throw new Error('Account unavailable');personalContext_.account=latest;personalContext_.workspace=null}}
 function locked_(fn){var lock=LockService.getScriptLock();lock.waitLock(30000);try{personalRefreshContext_();return fn()}finally{lock.releaseLock()}}
-function googleConfig_(){var p=props_(),clientId=p.getProperty('GOOGLE_CLIENT_ID'),clientSecret=p.getProperty('GOOGLE_CLIENT_SECRET'),origin=p.getProperty('APP_ORIGIN');if(!clientId||!clientSecret||!/^https:\/\/[^/]+$/.test(origin||''))throw new Error('Google service is not configured');return {clientId:clientId,clientSecret:clientSecret,origin:origin,redirect:ScriptApp.getService().getUrl()}}
+function googleConfig_(){var p=props_(),clientId=p.getProperty('GOOGLE_CLIENT_ID'),clientSecret=p.getProperty('GOOGLE_CLIENT_SECRET'),origin=p.getProperty('APP_ORIGIN');if(!clientId||!clientSecret||!/^https:\/\/[^/]+$/.test(origin||''))throw new Error('Google service is not configured');var app=p.getProperty('APP_URL'),redirect=p.getProperty('OAUTH_REDIRECT_URI');if(redirect&&(!app||!app.startsWith(origin+'/')||/[?#]/.test(app)||redirect!==app+'oauth-callback.html'))throw new Error('OAuth redirect is not configured');return {clientId:clientId,clientSecret:clientSecret,origin:origin,redirect:redirect||ScriptApp.getService().getUrl()}}
 function doGet(e){
  var p=e&&e.parameter||{};
  if(p.mode==='bridge'){if(!/^[a-f0-9]{32}$/.test(p.channel||''))throw new Error('Invalid channel');var t=HtmlService.createTemplateFromFile('Bridge');t.channel=p.channel;t.appOrigin=googleConfig_().origin;return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)}
@@ -52,15 +52,15 @@ function googleTokenRequest_(payload){var r=UrlFetchApp.fetch('https://oauth2.go
 function googleBegin_(p,session){
  if(!p||!/^[a-f0-9]{64}$/.test(p.proofHash||''))throw new Error('Invalid browser proof');
  var c=googleConfig_(),state=randomToken_(),nonce=randomToken_(),expected=null;if(p.gmail===true){var current=googleSession_(session,false);expected=readProp_('account:'+current.id)}
- CacheService.getScriptCache().put('oauth:'+hash_(state),JSON.stringify({proofHash:p.proofHash,nonce:nonce,gmail:p.gmail===true,expectedSub:expected?expected.id:null,expires:Date.now()+600000}),600);
+ CacheService.getScriptCache().put('oauth:'+hash_(state),JSON.stringify({proofHash:p.proofHash,nonce:nonce,gmail:p.gmail===true,expectedSub:expected?expected.id:null,redirect:c.redirect,expires:Date.now()+600000}),600);
  var scope='openid email profile https://www.googleapis.com/auth/drive.file'+(p.gmail===true?' https://www.googleapis.com/auth/gmail.send':'');
- var q={client_id:c.clientId,redirect_uri:c.redirect,response_type:'code',scope:scope,state:state,nonce:nonce,access_type:'offline',prompt:'consent',include_granted_scopes:'true'};
+ var q={client_id:c.clientId,redirect_uri:c.redirect,response_type:'code',scope:scope,state:state,nonce:nonce,access_type:'offline',prompt:'select_account consent',include_granted_scopes:'true'};
  if(expected)q.login_hint=expected.email;
  return {url:'https://accounts.google.com/o/oauth2/v2/auth?'+Object.keys(q).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(q[k])).join('&')};
 }
 function googleCallback_(p){return locked_(function(){
  if(!/^[a-f0-9]{96}$/.test(p.state||''))throw new Error('Invalid state');var cache=CacheService.getScriptCache(),key='oauth:'+hash_(p.state),raw=cache.get(key);if(!raw)throw new Error('Authorization expired');cache.remove(key);var flow=JSON.parse(raw);if(flow.expires<Date.now())throw new Error('Authorization expired');if(p.error){throw new Error('Google authorization was declined')}
- var c=googleConfig_(),tokens=googleTokenRequest_({code:p.code,client_id:c.clientId,client_secret:c.clientSecret,redirect_uri:c.redirect,grant_type:'authorization_code'});
+ var c=googleConfig_(),tokens=googleTokenRequest_({code:p.code,client_id:c.clientId,client_secret:c.clientSecret,redirect_uri:flow.redirect||c.redirect,grant_type:'authorization_code'});
  // Google's token endpoint is the issuer. Check its ID-token claims before use.
  var parts=String(tokens.id_token||'').split('.');if(parts.length!==3)throw new Error('Missing Google identity');var claims=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[1])).getDataAsString());
  if(claims.aud!==c.clientId||!['https://accounts.google.com','accounts.google.com'].includes(claims.iss)||claims.nonce!==flow.nonce||claims.exp*1000<=Date.now()||claims.email_verified!==true||!/^\d{1,40}$/.test(claims.sub||''))throw new Error('Google identity could not be verified');
@@ -71,6 +71,16 @@ function googleCallback_(p){return locked_(function(){
  var session=randomToken_();writeProp_('session:'+hash_(session),{id:account.id,expires:Date.now()+7*86400000});var handoff=randomToken_();cache.put('handoff:'+hash_(handoff),JSON.stringify({session:session,proofHash:flow.proofHash}),600);
  var appUrl=props_().getProperty('APP_URL');if(!appUrl||!appUrl.startsWith(c.origin+'/')||/[#?]/.test(appUrl))throw new Error('APP_URL is not configured');return appUrl+'#google_handoff='+handoff+'&proof_hash='+flow.proofHash;
 })}
+// The site callback bypasses the Apps Script browser account router. Its code
+// can only be redeemed with the initiating browser's secret proof and state.
+function googleSiteCallback_(p){
+ if(!p||!/^[a-f0-9]{96}$/.test(p.state||'')||!/^[a-f0-9]{64}$/.test(p.proof||''))throw new Error('Invalid browser proof');
+ var raw=CacheService.getScriptCache().get('oauth:'+hash_(p.state));if(!raw)throw new Error('Authorization expired');var flow=JSON.parse(raw);
+ if(flow.proofHash!==hash_(p.proof))throw new Error('Browser proof mismatch');
+ if(flow.redirect!==props_().getProperty('APP_URL')+'oauth-callback.html')throw new Error('Invalid callback route');
+ if(!p.error&&(typeof p.code!=='string'||!p.code||p.code.length>4096))throw new Error('Invalid authorization code');
+ try{return {completion:googleCallback_({state:p.state,code:p.code,error:p.error})}}catch(error){throw new Error(googleCallbackIssue_(error).code)}
+}
 function googleFinish_(p){return locked_(function(){
  if(!p||!/^[a-f0-9]{64}$/.test(p.proof||'')||!/^[a-f0-9]{96}$/.test(p.handoff||''))throw new Error('Invalid browser proof');
  var cache=CacheService.getScriptCache(),key='handoff:'+hash_(p.handoff),raw=cache.get(key);if(!raw)throw new Error('Authorization expired');var result=JSON.parse(raw);if(result.proofHash!==hash_(p.proof))throw new Error('Browser proof mismatch');cache.remove(key);return {session:result.session};
@@ -109,6 +119,7 @@ function googleDispatch(session,action,p){
  if(action==='i18n-catalog')return translationCatalog_(p);
  if(action==='auth-begin')return googleBegin_(p,session);
  if(action==='auth-finish')return googleFinish_(p);
+ if(action==='auth-site-callback')return googleSiteCallback_(p);
  if(action==='auth-guest'){var token=randomToken_();writeProp_('session:'+hash_(token),{id:'guest:'+hash_(token),guest:true,expires:Date.now()+6*3600000});return {access_token:token,user:{id:'guest:'+hash_(token),is_anonymous:true}}}
  if(action==='auth-logout'){googleSession_(session,true);props_().deleteProperty('session:'+hash_(session));return true}
  if(action==='workspace-public-resolve'){try{var w=routeContext_(p.token);return {found:!!workspaceResolve_(w,p.token)}}catch(e){return {found:false}}}

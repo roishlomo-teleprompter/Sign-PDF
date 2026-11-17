@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const ROOT=path.resolve(__dirname,'..');
 const PUBLIC_FILES=[
- 'index.html','google-drive.html','privacy.html','terms.html','manifest.webmanifest','sw.js',
+ 'index.html','google-drive.html','oauth-callback.html','privacy.html','terms.html','manifest.webmanifest','sw.js',
  'i18n.js','document-preview.js','google-drive-config.js','google-drive-client.js','google-workspace.js',
  'google-account.js','google-migration.js','gmail-mail.js','upload-hold.js','pdf-transfer.js','events.js',
  'signature-studio.js','signature-studio.css','fonts/gveret-levin.ttf','fonts/caveat.ttf','fonts/allura.ttf','fonts/allura-OFL.txt','fonts/gveret-levin-OFL.txt','fonts/caveat-OFL.txt',
@@ -32,7 +32,7 @@ function build(destination=path.join(ROOT,'dist')){
  for(const file of [...PUBLIC_FILES,'locales/source.json'].sort())digest.update(file).update(fs.readFileSync(path.join(destination,file)));
  const revision=digest.digest('hex').slice(0,20);
  const version=url=>{const file=url.replace(/^\.\//,'').split('?')[0];return file!=='sw.js'&&PUBLIC_FILES.includes(file)&&/\.(js|css)$/.test(file)?url.split('?')[0]+'?v='+revision:url};
- for(const file of ['index.html','google-drive.html']){const target=path.join(destination,file);fs.writeFileSync(target,fs.readFileSync(target,'utf8').replace(/\b(src|href)="([^"\s]+)"/g,(_,attribute,url)=>attribute+'="'+version(url)+'"'))}
+ for(const file of ['index.html','google-drive.html','oauth-callback.html']){const target=path.join(destination,file);fs.writeFileSync(target,fs.readFileSync(target,'utf8').replace(/\b(src|href)="([^"\s]+)"/g,(_,attribute,url)=>attribute+'="'+version(url)+'"'))}
  const catalogUrl='./locales/source.json?v='+revision;
  const client=path.join(destination,'i18n.js');fs.writeFileSync(client,fs.readFileSync(client,'utf8').replace("'./locales/source.json'",JSON.stringify(catalogUrl)));
  const worker=path.join(destination,'sw.js');let workerCode=fs.readFileSync(worker,'utf8').replace(/const CACHE_VERSION='[^']+'/,'const CACHE_VERSION='+JSON.stringify('sign-pdf-shell-'+revision+'-google'));
