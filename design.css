@@ -458,6 +458,5 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .sf-box{background:#ffed808c;border-color:#ceaf39}.sf-box.selected{background:#ffe25f9e;border-color:#bd8d00}.sf-tools [data-count]{font-size:12px;color:#64728b}
 .recipient-mode .viewer-hint{min-width:0;white-space:normal;line-height:1.35}
 
-/* Five permanent navigation destinations, including the private signature library. */
-.ev-nav{grid-template-columns:repeat(5,minmax(0,1fr))}.ev-nav button{min-width:0}.ev-nav button span{max-width:100%;overflow-wrap:normal;line-height:1.2}.ev-nav button[data-tab=signatures] svg{width:27px}
-@media(max-width:600px){.ev-nav{gap:2px;padding-inline:5px}.ev-nav button{font-size:11px;padding:7px 2px;min-height:64px}.ev-nav button span{max-width:72px}.ev-nav button svg{width:24px;height:24px}}
+/* Network notice keeps the active document and its local edits in place. */
+.network-notice{position:sticky;top:0;z-index:3000;padding:12px 18px;background:#fff5da;color:#674a0c;border-bottom:1px solid #eed592;text-align:center;font-size:14px;line-height:1.5;overflow-wrap:anywhere}.network-notice.hidden{display:none}#startupCard.startup-offline h1::before{content:"";display:block;width:46px;height:46px;margin:0 auto 18px;border:3px solid #8194b8;border-radius:50%;background:linear-gradient(135deg,transparent 47%,#8194b8 48%,#8194b8 52%,transparent 53%)}#startupCard.startup-offline p{max-width:390px}

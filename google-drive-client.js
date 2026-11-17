@@ -1,6 +1,9 @@
 /* Google-only identity, isolated sessions and private Drive workspace access. */
 window.GoogleDriveClient=(()=>{
  const KEY='signway-google-session-v2';
+ function tr(he,en){return window.SignWayI18n?SignWayI18n.translate(he,en):(/^(he|iw)/.test(document.documentElement.lang)?he:en)}
+ function offlineError(){return Object.assign(new Error(tr('אין חיבור לאינטרנט. התחברו לרשת ונסו שוב.','You are offline. Connect to the internet and try again.')),{code:'NETWORK_OFFLINE'})}
+ function requireNetwork(){if(navigator.onLine===false)throw offlineError()}
  function create(){
   const config=window.SIGNWAY_GOOGLE_CONFIG||{};
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[-\w]+\/exec$/.test(config.endpoint||''))throw new Error('נדרשת הגדרת חיבור Google החדש לפני הפעלת גרסה זו.');
@@ -25,6 +28,7 @@ window.GoogleDriveClient=(()=>{
    async getUser(){const result=await auth.getSession();return result.error?result:{data:{user:result.data.session?.user||null},error:null}},
    async signInAnonymously(){try{if(!session||!session.user?.is_anonymous)save(await transport.call('auth-guest'));return {data:{session,user:session.user},error:null}}catch(e){return failure(e)}},
    async signInWithOAuth({options={}}={}){
+    if(navigator.onLine===false)return failure(offlineError());
     const popup=window.open('about:blank','signway-google-login','popup,width=520,height=720');if(!popup)return failure(new Error('Allow the Google sign-in popup and try again.'));
     try{
      const proof=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
@@ -60,7 +64,8 @@ window.GoogleDriveClient=(()=>{
    if(m.type==='signway-drive-ready'&&!source&&!failed){source=event.source;origin=event.origin;clearTimeout(startupTimer);readyResolve();return}
    if(event.source!==source||event.origin!==origin||m.type!=='signway-drive-result')return;const task=pending.get(m.id);if(!task)return;pending.delete(m.id);clearTimeout(task.timer);m.error?task.reject(new Error(m.error)):task.resolve(m.data);
   }
-  window.addEventListener('message',receive);connect();
+  function wentOffline(){for(const task of pending.values()){clearTimeout(task.timer);task.reject(offlineError())}pending.clear()}
+  window.addEventListener('offline',wentOffline);window.addEventListener('message',receive);connect();
   async function waitReady(){for(;;){if(disposed)throw Error('Connection closed');const waiting=ready;try{await waiting;return}catch(e){if(disposed||e.code!=='GOOGLE_CONNECTION_TIMEOUT'||attempt>=2)throw e;if(ready===waiting)connect()}}}
   async function publicCall(action,payload){
    const id=crypto.randomUUID(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
@@ -71,7 +76,7 @@ window.GoogleDriveClient=(()=>{
     if(result.error)throw Error(result.error);return result.data;
    }catch(error){if(error.name==='AbortError'||error instanceof TypeError)throw Error('No confirmation received. Check before retrying.');throw error}finally{clearTimeout(timer)}
   }
-  return {reconnect(){if(disposed)throw Error('Connection closed');if(pending.size)throw Error('A request is still in progress');clearTimeout(startupTimer);readyReject(connectionError());attempt=0;connect()},async call(action,payload={}){if(disposed)throw new Error('Connection closed');if(typeof fetch==='function'&&['shared-public-read','shared-public-sign','shared-public-result','i18n-catalog'].includes(action))return publicCall(action,payload);await waitReady();if(disposed)throw new Error('Connection closed');const id=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(new Error('No confirmation received. Check before retrying.'))},['import-start','import-finish'].includes(action)?300000:60000);pending.set(id,{resolve,reject,timer});source.postMessage({type:'signway-drive-request',channel,id,action,payload,accessToken:action==='i18n-catalog'||action.startsWith('shared-public-')||['auth-finish','auth-site-callback','auth-guest','workspace-public-resolve'].includes(action)?undefined:sessionToken()},origin)})},dispose(){disposed=true;clearTimeout(startupTimer);readyReject(new Error('Connection closed'));window.removeEventListener('message',receive);frame.remove();for(const task of pending.values()){clearTimeout(task.timer);task.reject(new Error('Connection closed'))}pending.clear()}};
+  return {reconnect(){if(disposed)throw Error('Connection closed');if(pending.size)throw Error('A request is still in progress');clearTimeout(startupTimer);readyReject(connectionError());attempt=0;connect()},async call(action,payload={}){requireNetwork();if(disposed)throw new Error('Connection closed');if(typeof fetch==='function'&&['shared-public-read','shared-public-sign','shared-public-result','i18n-catalog'].includes(action))return publicCall(action,payload);await waitReady();requireNetwork();if(disposed)throw new Error('Connection closed');const id=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(new Error('No confirmation received. Check before retrying.'))},['import-start','import-finish'].includes(action)?300000:60000);pending.set(id,{resolve,reject,timer});source.postMessage({type:'signway-drive-request',channel,id,action,payload,accessToken:action==='i18n-catalog'||action.startsWith('shared-public-')||['auth-finish','auth-site-callback','auth-guest','workspace-public-resolve'].includes(action)?undefined:sessionToken()},origin)})},dispose(){disposed=true;clearTimeout(startupTimer);readyReject(new Error('Connection closed'));window.removeEventListener('message',receive);window.removeEventListener('offline',wentOffline);frame.remove();for(const task of pending.values()){clearTimeout(task.timer);task.reject(new Error('Connection closed'))}pending.clear()}};
  }
  return {create};
 })();
