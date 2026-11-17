@@ -111,7 +111,7 @@ function workspaceSave_(w,skipPurge,skipContacts,purgeLimit){
  for(var p of w.tables.event_participants)writeProp_('route:'+hash_(p.token),{id:a.id});
  var previous=a.manifestId;var next=Object.assign({},a,{manifestId:f.getId()});writeProp_('account:'+a.id,next);personalContext_.account=next;personalContext_.workspace=w;
  try{if(!skipContacts)workspaceContactsFile_(w);if(previous&&previous!==f.getId())personalDrive_().getFileById(previous).setTrashed()}catch(e){console.warn('Drive housekeeping deferred: '+e.message)}
- if(!skipPurge&&workspacePurgeFiles_(w,purgeLimit)>0)workspaceSave_(w,true,skipContacts);
+ if(!skipPurge){var purged=workspacePurgeFiles_(w,purgeLimit),removed=workspaceDeleteOriginals_(w);if(purged+removed>0)workspaceSave_(w,true,skipContacts)}
 }
 function routeContext_(token){if(typeof token!=='string'||token.length>200)throw new Error('Invalid signing link');var route=readProp_('route:'+hash_(token));if(!route)throw new Error('Signing link unavailable');setContext_(route.id);return workspaceLoad_()}
 function googleDispatch(session,action,p){
@@ -146,7 +146,7 @@ function personalOwner_(w,p){var result;
  else if(p.op==='deletion-cleanup'){const cleaned=workspacePurgeFiles_(w,8);if(cleaned>0)workspaceSave_(w,true,true);return {cleaned,cleanupPending:!!w.pendingFileTrash?.length}}
  else if(p.op==='documents-delete-signed'){if(!Array.isArray(p.ids)||p.ids.length>2000)throw new Error('Invalid documents');const ids=p.ids.map(workspaceUuid_),rows=w.tables.sign_requests.filter(r=>ids.includes(r.id)&&r.status==='signed');workspaceRemoveDocuments_(w,rows.map(r=>r.id),rows);result={deleted:rows.length}}
  else if(p.op==='document-delete'){workspaceRemoveDocuments_(w,[workspaceUuid_(p.id)]);result={deleted:true}}
- else if(p.op==='storage-compact')return workspaceCompact_(w);
+ else if(p.op==='storage-compact'){const compact=workspaceCompact_(w);if(workspaceDeleteOriginals_(w)>0)workspaceSave_(w,true,true);return compact}
  else if(p.op==='settings-get')return w.settings;
  else if(p.op==='settings-set'){var patch=p.settings||{};if(Object.keys(patch).some(k=>!['language','gmailSendConfirmed'].includes(k))||('language'in patch&&!['he','en','es','pt-BR','fr','de','ar','hi','id','ja','ko','zh-CN','ru'].includes(patch.language))||('gmailSendConfirmed'in patch&&typeof patch.gmailSendConfirmed!=='boolean'))throw new Error('Invalid settings');Object.assign(w.settings,patch);result=w.settings}
  else if(p.op==='self-save')result=workspaceSelf_(w,p);

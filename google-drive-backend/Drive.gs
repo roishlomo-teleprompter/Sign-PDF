@@ -2,7 +2,7 @@
  * Never use DriveApp: that would put every user's files in the deployment owner's account. */
 function personalRequest_(path,options){
  var a=personalContext_.account,o=Object.assign({muteHttpExceptions:true,followRedirects:false},options||{});o.headers=Object.assign({},o.headers||{},{Authorization:'Bearer '+googleAccess_(a)});
- var r=UrlFetchApp.fetch('https://www.googleapis.com/'+path,o),status=r.getResponseCode();
+ var allowMissing=o.acceptNotFound===true;delete o.acceptNotFound;var r=UrlFetchApp.fetch('https://www.googleapis.com/'+path,o),status=r.getResponseCode();if(status===404&&allowMissing)return r;
  if(status===401){CacheService.getScriptCache().remove('google-token:'+a.id);throw new Error('Google access expired. Reconnect your account.')}
  if(status<200||status>=300){
   var details={};try{details=JSON.parse(r.getContentText()).error||{}}catch(_){}
@@ -36,3 +36,5 @@ function personalSheets_(){
  function sheet(){var w=workspaceLoad_();if(!w.sharedRows)w.sharedRows=[];return {getLastRow:()=>w.sharedRows.length,appendRow:row=>w.sharedRows.push(row),getDataRange:()=>({getValues:()=>w.sharedRows.map(r=>r.slice())}),getRange:(row,col,height,width)=>({getValues:()=>w.sharedRows.slice(row-1,row-1+height).map(r=>r.slice(col-1,col-1+width)),setValues:values=>{if(values.length!==height||values.some(r=>r.length!==width))throw new Error('Invalid index range');values.forEach((r,i)=>{if(!w.sharedRows[row-1+i])w.sharedRows[row-1+i]=[];r.forEach((v,j)=>w.sharedRows[row-1+i][col-1+j]=v)})}})}}
  return {openById:()=>({getSheetByName:()=>workspaceLoad_().sharedRows?.length?sheet():null,insertSheet:sheet}),flush:()=>workspaceSave_(workspaceLoad_())};
 }
+
+function personalDeleteOriginal_(id){if(typeof id!=='string'||!/^[-\w]+$/.test(id))throw new Error('Invalid original file');personalRequest_('drive/v3/files/'+id,{method:'delete',acceptNotFound:true})}

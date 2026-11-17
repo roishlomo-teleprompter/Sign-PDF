@@ -83,7 +83,7 @@ function workspaceDownload_(w,path){const item=w.files.find(f=>f.path===path);if
 function workspaceSelf_(w,p){
  const id=workspaceUuid_(p.creationId),existing=w.tables.sign_requests.find(r=>r.id===id),digest=hash_(p.original+'|'+p.signed+'|'+p.title);
  if(existing){if(existing.selfDigest!==digest)throw new Error('Save identifier already used');return {id}}
- const {row:r}=workspaceCreate_(w,p.title,null,id);workspacePut_(w,r.original_path,p.original);workspacePut_(w,r.signed_path,p.signed);r.status='signed';r.signed_at=new Date().toISOString();r.selfDigest=digest;return {id};
+ const {row:r}=workspaceCreate_(w,p.title,null,id);workspacePut_(w,r.original_path,p.original);workspacePut_(w,r.signed_path,p.signed);r.status='signed';r.signed_at=new Date().toISOString();r.selfDigest=digest;workspaceRetireOriginals_(w,r);return {id};
 }
 function workspacePending_(w,r,answersRequired){
  if(r.status!=='pending'||Date.parse(r.expires_at)<=Date.now())throw new Error('The signing link expired or was cancelled');
@@ -112,7 +112,7 @@ function workspacePublic_(w,actor,p){
    if(p.op==='download'){workspacePending_(w,r,false);if(p.path!==r.original_path)throw new Error('PDF is not available to this signer');return workspaceDownload_(w,p.path)}
    if(p.op==='upload'){workspacePending_(w,r,true);if(p.path!==r.signed_path)throw new Error('Invalid signed PDF path');workspacePut_(w,p.path,p.base64);result={path:p.path}}
    else if(p.op==='complete_sign_request'){
-    if(r.status!=='signed'){workspacePending_(w,r,true);if(!w.files.some(f=>f.path===r.signed_path))throw new Error('Upload the signed PDF first');r.status='signed';r.signed_at=new Date().toISOString();r.updated_at=r.signed_at}result=true;
+    if(r.status!=='signed'){workspacePending_(w,r,true);if(!w.files.some(f=>f.path===r.signed_path))throw new Error('Upload the signed PDF first');r.status='signed';r.signed_at=new Date().toISOString();r.updated_at=r.signed_at}workspaceRetireOriginals_(w,r);result=true;
    }else throw new Error('Unsupported signer operation');
   }
  }
@@ -124,3 +124,13 @@ function workspaceRemoveDocuments_(w,ids,knownRows){const rows=knownRows||w.tabl
 /* A committed cleanup queue allows recovery after a Drive timeout without losing
  * the reference to a PDF or touching files belonging to unrelated documents. */
 function workspacePurgeFiles_(w,limit){const pending=w.pendingFileTrash||[],keep=[];let cleaned=0,attempted=0;for(const id of pending){if(attempted++>=(limit||3)){keep.push(id);continue}try{if(w.files.some(f=>f.fileId===id))throw new Error('File still referenced');personalJson_('drive/v3/files/'+id,'patch',{trashed:true});cleaned++}catch(e){keep.push(id)}}w.pendingFileTrash=keep;return cleaned}
+
+/* Queue originals only after a verified signed PDF exists. Commit this queue before
+ * permanently deleting anything; retries verify the signed replacement again. */
+function workspaceRetireOriginals_(w,completed){
+ const person=w.tables.event_participants.find(p=>p.requests.some(f=>f.request_id===completed.id));let rows=[completed];
+ if(person){const ids=w.tables.event_participants.filter(p=>p.event_id===person.event_id).flatMap(p=>p.requests.map(f=>f.request_id));rows=w.tables.sign_requests.filter(r=>ids.includes(r.id));if(rows.length!==new Set(ids).size||rows.some(r=>r.status!=='signed'))return}
+ const eligible=rows.filter(r=>r.status==='signed'&&r.original_path);for(const r of eligible){const signed=w.files.find(f=>f.path===r.signed_path);if(!signed)throw new Error('Signed PDF is missing');const file=personalDrive_().getFileById(signed.fileId);if(file.getSize()!==signed.bytes||hashBytes_(file.getBlob().getBytes())!==signed.sha256)throw new Error('Signed PDF verification failed')}
+ w.pendingOriginalDelete=w.pendingOriginalDelete||[];for(const r of eligible){const original=w.files.find(f=>f.path===r.original_path),signed=w.files.find(f=>f.path===r.signed_path);if(original&&original.fileId!==signed.fileId){if(!w.pendingOriginalDelete.some(p=>p.fileId===original.fileId))w.pendingOriginalDelete.push({fileId:original.fileId,signedFileId:signed.fileId,signedSha:signed.sha256,signedBytes:signed.bytes});w.files=w.files.filter(f=>f.path!==r.original_path)}r.original_path=null}
+}
+function workspaceDeleteOriginals_(w){let cleaned=0;const keep=[];for(const item of w.pendingOriginalDelete||[]){try{if(cleaned>=8||w.files.some(f=>f.fileId===item.fileId))throw new Error('Original still referenced');const signed=w.files.find(f=>f.fileId===item.signedFileId);if(!signed||signed.sha256!==item.signedSha)throw new Error('Signed replacement missing');const file=personalDrive_().getFileById(signed.fileId);if(file.getSize()!==item.signedBytes||hashBytes_(file.getBlob().getBytes())!==item.signedSha)throw new Error('Signed replacement invalid');personalDeleteOriginal_(item.fileId);cleaned++}catch(e){keep.push(item)}}w.pendingOriginalDelete=keep;return cleaned}
