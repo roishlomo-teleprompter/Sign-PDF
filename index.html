@@ -109,7 +109,7 @@
     function finishStartupAnimation(){if(startupAnimationFinished||startupHoldTimer)return;clearTimeout(startupAnimationTimer);document.getElementById('startupCard').classList.add('signature-complete');const complete=()=>{startupAnimationFinished=true;revealStartup()};if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)complete();else startupHoldTimer=setTimeout(complete,2000)}
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){document.querySelectorAll('#startupCard animate,#startupCard animateMotion').forEach(node=>node.remove());finishStartupAnimation()}else{const motion=document.querySelector('#startupCard animateMotion'),scene=document.querySelector('#startupCard svg');motion?.addEventListener('endEvent',finishStartupAnimation,{once:true});let elapsed=0;try{elapsed=scene?.getCurrentTime?.()||0}catch{}const remaining=Math.max(0,4000-elapsed*1000);if(!remaining)finishStartupAnimation();else startupAnimationTimer=setTimeout(finishStartupAnimation,remaining+100)}
     function startupText(id,copyId){const {he,en}=document.getElementById(copyId).dataset;const node=document.getElementById(id);node.dataset.he=he;node.dataset.en=en;let lang;try{lang=localStorage.getItem('signway-language')}catch{}lang=lang||navigator.language||'en';node.textContent=window.SignWayI18n?SignWayI18n.translate(he,en):/^(he|iw)(-|$)/.test(lang)?he:en}
-    let startupWatchdog;
+    let startupWatchdog;var revealLocalHome=null;
     function armStartupWatchdog(){clearTimeout(startupWatchdog);if(!startupComplete&&navigator.onLine!==false)startupWatchdog=setTimeout(()=>showStartupError(new Error('Startup timed out')),15000)}
     function showOfflineStartup(){
       clearTimeout(startupWatchdog);clearTimeout(startupAnimationTimer);clearTimeout(startupHoldTimer);startupAnimationFinished=true;
@@ -120,26 +120,14 @@
     }
     function showStartupError(error){
       if(startupComplete)return;
-      if(navigator.onLine===false){showOfflineStartup();return}
+      if(revealLocalHome){revealLocalHome();finishStartup();return}
       console.error('Application startup failed:',error);clearTimeout(startupWatchdog);clearTimeout(startupAnimationTimer);clearTimeout(startupHoldTimer);startupAnimationFinished=true;
       startupCard.classList.remove('hidden','startup-offline');startupCard.classList.add('startup-error');
       startupText('startupTitle','errorTitle');
       startupText('startupMessage','errorMessage');
       document.getElementById('retryStartup').classList.remove('hidden');
     }
-    function updateNetworkStatus(){
-      const offline=navigator.onLine===false;document.getElementById('networkNotice').classList.toggle('hidden',!offline||!startupComplete);
-      if(startupComplete)return;
-      if(offline){showOfflineStartup();return}
-      if(startupCard.classList.contains('startup-offline')){
-        startupCard.classList.remove('startup-offline','startup-error');
-        startupText('startupTitle','waitingTitle');
-        startupText('startupMessage','waitingMessage');
-        // An interrupted initialization must be retried explicitly; never replay a save or send.
-        if(appStarted){showStartupError(new Error('Connection restored. Retry initialization.'));return}
-      }
-      armStartupWatchdog();
-    }
+    function updateNetworkStatus(){document.getElementById('networkNotice').classList.add('hidden')}
     var appStarted=false;
     function finishStartup(){startupComplete=true;clearTimeout(startupWatchdog);revealStartup();updateNetworkStatus()}
     window.addEventListener('offline',updateNetworkStatus);window.addEventListener('online',updateNetworkStatus);updateNetworkStatus();
@@ -209,8 +197,11 @@
       if(sharedToken){await initializeSharedSigner();return}
       if(eventToken){await initializeEventSigner();return}
       if(signingToken){await initializeSigner();return}
-      const {data,error}=await withStartupTimeout(db.auth.getSession());
-      if(error&&!['refresh_token_not_found','refresh_token_already_used','session_not_found'].includes(error.code))throw error;
+      showLocalHome();finishStartup();
+      if(navigator.onLine===false)return;
+      let result;try{result=await withStartupTimeout(db.auth.getSession())}catch{return}
+      const {data,error}=result;
+      if(error&&!['refresh_token_not_found','refresh_token_already_used','session_not_found'].includes(error.code))return;
       const user=error?null:data?.session?.user;
       if(user&&!user.is_anonymous){showOwner(user)}else showLogin(user);
       if(googleCallbackError)accountControls?.showError(googleCallbackError);
@@ -241,6 +232,13 @@
       }catch(error){console.error(error);$('signerCard').classList.remove('hidden');status(tr('קישור החתימה אינו תקין, פג תוקף או שכבר נוצל.','The signing link is invalid, expired, or has already been used.'),true)}
     }
 
+    function showLocalHome(){
+      if(ownerId)return;
+      document.body.classList.remove('login-mode');$('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.add('hidden');updateGreeting();
+      if(window.SignEvents&&!eventDashboard)eventDashboard=SignEvents.mount({db,ownerId:null,tr,localOnly:true,loadDocuments,onNewDocument:startNewDocument});
+    }
+    revealLocalHome=showLocalHome;
+    window.addEventListener('online',()=>{if(!ownerId&&!signingToken&&!sharedToken&&!eventToken)initialize().catch(()=>{})});
     function showLogin(user){
       document.querySelector('.startup-account-preview')?.remove();
       sharedOwner?.remove();sharedOwner=null;ownerId=null;document.body.classList.add('login-mode');
@@ -255,7 +253,7 @@
       $('appContent').classList.remove('hidden');$('uploadCard').classList.remove('hidden');$('documentsSection').classList.remove('hidden');
       $('deviceNotice').classList.toggle('hidden',!user.is_anonymous);updateGreeting();loadDocuments();
       if(window.SignEvents){eventDashboard?.remove();eventDashboard=SignEvents.mount({db,ownerId,tr,loadDocuments,onCreateShared:startSharedRequest,onNewDocument:startNewDocument,onOpenShared:id=>sharedOwner?.openDocument(id)})}
-      if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,onSignatures:()=>SignatureStudio.open({db,userId:ownerId,tr,manage:true})})}
+      if(window.AccountAuth){accountControls?.remove();accountControls=AccountAuth.mount({db,user,tr,onSignatures:()=>eventDashboard?.selectTab?.('signatures')})}
       window.GoogleMigration?.mount({db,tr});
       db.signwayCompactStorage?.().catch(error=>console.warn('Drive cleanup deferred: '+error.message));
       if(window.SharedSignatures&&window.SharedDrive?.enabled(user)){sharedOwner=SharedSignatures.owner({db,ownerId,tr,saveBlob,selected:()=>selectedUpload,unifiedDocuments:true,onDocumentsChanged:()=>filterDocuments(),onNewDocument:startNewDocument,onAvailable:()=>refreshUploadLabel(),showFlow:flow=>{if(flow==='shared')eventDashboard?.selectTab?.('upload');setFlow(flow)},notify:showNotice,progress:startDeletionProgress,confirmDeleteAll:()=>askConfirm(tr('מחיקת כל המסמכים המשותפים','Delete all shared documents'),tr('כל המסמכים בחתימה משותפת יימחקו, גם הממתינים וגם החתומים. קובצי ה-PDF, החתימות ונתוני החתימה יועברו לסל המחזור ב-Drive. הקישורים יפסיקו לפעול. אנשי הקשר והמסמכים הרגילים יישמרו.','All shared documents will be deleted, including pending and signed ones. PDFs, signatures and signing data will be moved to Drive Trash. Personal links will stop working. Contacts and regular documents will be kept.'),tr('מחיקת הכול','Delete all')),confirmDelete:doc=>askConfirm(tr('מחיקת מסמך משותף','Delete shared document'),tr('המסמך, כל גרסאות ה-PDF, החתימות ונתוני החתימה יועברו לסל המחזור ב-Drive. הקישורים יפסיקו לפעול. אנשי הקשר יישמרו.','The document, all PDF versions, signatures and signing data will be moved to Drive Trash. Personal links will stop working. Contacts will be kept.'),tr('מחיקת המסמך','Delete document')),confirmCancel:()=>askConfirm(tr('ביטול בקשת החתימות','Cancel signature request'),tr('הקישורים יפסיקו לפעול. החתימות שכבר נשמרו יישארו במסמך.','Personal links will stop working. Existing signatures remain in the document.'),tr('ביטול הבקשה','Cancel request')),mail:options=>GmailMail.compose({db,ownerId,tr,...options})});$('createSharedBtn').onclick=()=>sharedOwner.openEditor();sharedOwner.refresh()}
@@ -323,6 +321,7 @@
     $('copyLinkBtn').onclick=async()=>{const input=$('signingLink');try{await navigator.clipboard.writeText(input.value)}catch(e){input.select();document.execCommand('copy')}$('copyLinkBtn').querySelector('.action-label').textContent=tr('הועתק!','Copied!');setTimeout(()=>{const label=$('copyLinkBtn').querySelector('.action-label');if(label)label.textContent=tr('העתקה','Copy')},1600)};
 
     async function loadDocuments(){
+      if(!ownerId){$('documentsList').textContent=tr('התחברו לרשת ולחשבון Google כדי לטעון מסמכים.','Connect to the internet and sign in with Google to load documents.');return}
       sharedOwner?.refresh();
       const expectedOwner=ownerId,list=$('documentsList');list.innerHTML=`<div class="empty-docs">${tr('טוען מסמכים...','Loading documents...')}</div>`;
       let data,error,groupDocuments=[];try{groupDocuments=await eventDashboard?.documentGroups?.()||[];const result=await db.from('sign_requests').select('*').eq('owner_id',expectedOwner).order('created_at',{ascending:false});data=result.data;error=result.error}catch(e){error=e}
@@ -418,7 +417,7 @@
     document.body.classList.toggle('recipient-mode',!!(signingToken||eventToken||sharedToken));
     await initialize();
     }
-    function beginApp(){if(appStarted||navigator.onLine===false)return;appStarted=true;startApp().catch(showStartupError)}
+    function beginApp(){if(appStarted)return;appStarted=true;startApp().catch(showStartupError)}
     window.addEventListener('online',beginApp);beginApp();
   </script>
 </body>
