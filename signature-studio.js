@@ -105,7 +105,9 @@ window.SignatureStudio=(()=>{
   }
   dialog.oncancel=e=>{e.preventDefault();if(!busy)exit()};if(!host)dialog.showModal();render();
   if(canSave)call('list').then(data=>{if(disposed)return;library=data;loading=false;if(tab==='saved')render();else if($('[data-saved]'))$('[data-saved]').textContent=tr('בחירה מהחתימות שלי','Choose from my signatures')+' ('+library.entries.length+')'}).catch(e=>{if(!disposed){loading=false;if(tab==='saved')render();message(e)}});else loading=false;
-  return {close};
+  let panelLanguage=document.documentElement.lang;
+  function refreshLanguage(){if(disposed||panelLanguage===document.documentElement.lang)return;panelLanguage=document.documentElement.lang;drawPointer=null;stroke=null;render();if(busy)setBusy(true)}
+  return {close,refreshLanguage};
  }
  return {open,smooth,initials,fontFor,paint,exportPng};
 })();
