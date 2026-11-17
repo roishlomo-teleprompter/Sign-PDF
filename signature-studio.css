@@ -31,3 +31,5 @@
 .signature-studio.ss-inline .ss-footer{position:static;bottom:auto;margin-top:auto;flex:none}
 
 body[data-screen=signatures] .topbar{margin-bottom:12px}.signature-studio.ss-inline .ss-header{padding-top:6px;padding-bottom:10px}.ss-inline .ss-header h2{margin-top:0}
+
+.ss-label input{text-align:start}
