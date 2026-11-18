@@ -489,3 +489,6 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .signature-field-editor footer [data-cancel]{background:#fff5f5;color:#a34858;border-color:#efdce0}
 .signature-field-editor footer button:focus-visible{outline:3px solid #89a8ff;outline-offset:3px}
 .signature-field-editor .sf-error:empty{display:none}
+
+.link-result #changeUploadBtn{background:#edf3ff;color:#315496;border:1px solid #dbe5f6;font-weight:700}.link-result #changeUploadBtn:hover{background:#e3ecff}.doc-actions .action-cancel{color:#a64c57;background:#fff5f5;border-color:#eedcdf}
+.doc-actions:has([data-cancel]){grid-template-columns:repeat(2,minmax(0,1fr))}
