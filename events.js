@@ -1,5 +1,10 @@
 /* Event dashboard and capability-based multi-document signing. No recipient data is public. */
 window.SignEvents=(()=>{
+ function documentCache(ownerId,type,storage){
+  const key='signaway-document-list-v1:'+ownerId+':'+type,fields=['id','title','status','created_at','expires_at','original_path','signed_path','kind','signed','total','revision','createdAt','expiresAt'];
+  const clean=rows=>rows.slice(0,2000).filter(r=>r&&typeof r.id==='string'&&typeof r.title==='string'&&typeof r.status==='string').map(r=>{const row={};for(const k of fields)if(['string','number'].includes(typeof r[k]))row[k]=r[k];if(r.selfDigest)row.selfDigest=true;return row});
+  return {read(){try{const saved=JSON.parse(storage.getItem(key)||'null');return saved&&Array.isArray(saved.rows)?clean(saved.rows):null}catch{return null}},write(rows){try{storage.setItem(key,JSON.stringify({rows:clean(rows)}))}catch{}}};
+ }
  function notifications(ownerId,storage){
   const key='signaway-read-signed-documents-v1:'+ownerId;let seen=new Set();try{const value=JSON.parse(storage.getItem(key)||'[]');if(Array.isArray(value))seen=new Set(value.filter(x=>typeof x==='string'))}catch{}
   function keys(rows){return Array.from(new Set(rows.filter(d=>d.id&&!d.selfDigest&&(d.status==='signed'||d.status==='completed')).map(d=>(d.kind||'regular')+':'+d.id)))}
@@ -114,5 +119,5 @@ window.SignEvents=(()=>{
   }
   return {resume,completed:resume,refresh:resume};
  }
- return {mount,signer,notifications,link,escapeHtml:esc};
+ return {mount,signer,documentCache,notifications,link,escapeHtml:esc};
 })();

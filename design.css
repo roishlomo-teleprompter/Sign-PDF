@@ -497,3 +497,5 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .signature-field-editor>header h2{color:#172f51;font-size:clamp(18px,4.8vw,23px);line-height:1.4}
 .signature-field-editor>header p{color:#243b59;font-size:16px;font-weight:500;line-height:1.7;opacity:1;margin:10px 0;text-shadow:none}
 .signature-field-editor>header strong{color:#415674;font-size:14px;line-height:1.5;opacity:1}
+
+.document-sync-status{font-size:12px;line-height:1.5;color:#64748b;margin:8px 2px;min-height:0}
