@@ -492,3 +492,8 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 
 .link-result #changeUploadBtn{background:#edf3ff;color:#315496;border:1px solid #dbe5f6;font-weight:700}.link-result #changeUploadBtn:hover{background:#e3ecff}.doc-actions .action-cancel{color:#a64c57;background:#fff5f5;border-color:#eedcdf}
 .doc-actions:has([data-cancel]){grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Keep placement instructions readable independently of generic dialog headers. */
+.signature-field-editor>header{background:#eef4ff;color:#172f51;padding:18px 20px;border:1px solid #dbe5f5;border-radius:16px;box-shadow:none;text-align:start;text-shadow:none}
+.signature-field-editor>header h2{color:#172f51;font-size:clamp(18px,4.8vw,23px);line-height:1.4}
+.signature-field-editor>header p{color:#243b59;font-size:16px;font-weight:500;line-height:1.7;opacity:1;margin:10px 0;text-shadow:none}
+.signature-field-editor>header strong{color:#415674;font-size:14px;line-height:1.5;opacity:1}
