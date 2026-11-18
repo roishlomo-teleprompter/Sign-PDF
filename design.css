@@ -471,3 +471,10 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .scan-page-list{display:grid;gap:12px;margin:20px 0}.scan-page-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:12px;border:1px solid #d7e2f4;border-radius:12px;background:#f6f8ff}.scan-page-row img{width:54px;height:76px;object-fit:contain;background:#fff;border:1px solid #e1e8f5}.scan-page-row strong{margin-inline-end:auto}.scan-page-row button{font-size:12px;padding:7px;border-radius:9px}
 
 .scan-file-name{display:block;font-weight:700;margin:18px 0 8px}.scan-file-name input{display:block;box-sizing:border-box;width:100%;font-size:16px;margin-top:8px;padding:12px;border:1px solid #cbd8f2;border-radius:10px;text-align:start}
+
+/* Actual completed workflow milestones, no second rotating icon or synthetic timer. */
+.upload[aria-busy=true] .upload-percent{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;color:#fff;min-height:58px}
+.upload[aria-busy=true] .upload-percent b{font-size:34px;font-variant-numeric:tabular-nums}
+.upload[aria-busy=true] .upload-percent small{font-size:12px;margin-top:4px}
+.recipient-mode[data-recipient-state=loading] .intro:before{content:'';box-sizing:border-box;border:3px solid #dce6ff;border-top-color:#2455f5;animation:upload-wait 1s linear infinite;background:transparent}
+.recipient-mode[data-recipient-state=error] .intro:before{content:'!'}
