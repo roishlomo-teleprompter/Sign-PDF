@@ -499,3 +499,14 @@ body[data-screen=upload] .upload-row .upload:is(.file-ready,.uploaded) .upload-s
 .signature-field-editor>header strong{color:#415674;font-size:14px;line-height:1.5;opacity:1}
 
 .document-sync-status{font-size:12px;line-height:1.5;color:#64748b;margin:8px 2px;min-height:0}
+/* Keep the approved LTR header arrangement in every application language. */
+.topbar{direction:ltr;gap:12px}
+.topbar>.brand{order:0;direction:ltr;min-width:0;white-space:nowrap}
+.topbar>.header-tools{order:1;direction:ltr;flex-direction:row;flex-shrink:0}
+.topbar .brand-copy{text-align:left;direction:ltr}
+.topbar .brand-icon{order:-1}
+/* Anchor the picker to the app header, never to the globe at the screen edge. */
+.topbar .header-tools .language-picker{position:static}
+.topbar .header-tools .language-picker .lang-switch{top:calc(100% + 6px);left:auto;right:0;inset-inline-start:auto;inset-inline-end:0;width:min(230px,100%);min-width:0;max-width:100%;box-sizing:border-box;max-height:min(65dvh,480px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+.topbar .lang-switch button{min-width:0;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:360px){.topbar{gap:8px}.topbar .brand{gap:8px}.topbar .brand-copy b{font-size:18px!important}.topbar .brand-icon{width:36px!important;height:36px!important}.topbar .header-tools{gap:8px}}
